@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>BioID Elite v4 - Biometric Attendance System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+        }
+
+        .screen { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        /* LAUNCHER */
+        #launcher { justify-content: center; align-items: center; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); }
+        .launcher-container { text-align: center; padding: 20px; }
+        .launcher-container h1 { font-size: 48px; color: #2ecc71; margin-bottom: 10px; }
+        
+        .btn { padding: 16px 32px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; max-width: 300px; margin-bottom: 10px; }
+        .btn-primary { background: #2ecc71; color: #000; }
+        .btn-secondary { background: #3498db; color: #fff; }
+        .btn-back { position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: #333; color: #fff; border: none; border-radius: 6px; z-index: 10; }
+
+        /* USER TERMINAL */
+        .terminal-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        video { width: 90%; max-height: 70vh; border: 2px solid #2ecc71; border-radius: 12px; background: #111; object-fit: cover; }
+        #status { margin-top: 20px; padding: 12px 20px; border: 2px solid #2ecc71; border-radius: 6px; color: #2ecc71; font-weight: bold; text-align: center; width: 80%; }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #111; border: 2px solid #2ecc71; border-radius: 12px; padding: 25px; width: 85%; max-width: 400px; text-align: center; }
+        .modal-name { font-size: 28px; font-weight: bold; color: #2ecc71; margin: 15px 0; }
+        .modal-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .modal-buttons button { padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { background: #2ecc71; color: #000; }
+        .btn-cancel { background: #e74c3c; color: #fff; }
+
+        /* ADMIN DASHBOARD (Minimal for space) */
+        .admin-layout { flex: 1; padding: 15px; overflow-y: auto; }
+        .worker-item { background: #111; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="launcher" class="screen active">
+        <div class="launcher-container">
+            <h1>BioID Elite</h1>
+            <p style="color: #888; margin-bottom: 30px;">Mobile Biometric Terminal</p>
+            <button class="btn btn-primary" onclick="app.goToUserTerminal()">📷 OPEN SCANNER</button>
+            <button class="btn btn-secondary" onclick="app.goToAdmin()">⚙️ ADMIN PANEL</button>
+        </div>
+    </div>
+
+    <div id="user-terminal" class="screen">
+        <button class="btn-back" onclick="app.goToLauncher()">← Exit</button>
+        <div class="terminal-container">
+            <video id="video" autoplay playsinline muted></video>
+            <div id="status">Initializing Camera...</div>
+        </div>
+    </div>
+
+    <div id="admin-dashboard" class="screen">
+        <button class="btn-back" onclick="app.goToLauncher()">← Back</button>
+        <div class="admin-layout">
+            <h2 style="margin: 50px 0 20px; color: #3498db;">Worker Management</h2>
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="new-worker-name" placeholder="Enter name" style="padding: 10px; width: 70%; border-radius: 4px; border: none;">
+                <button onclick="admin.addWorker()" style="padding: 10px; background: #2ecc71; border: none; border-radius: 4px;">Add</button>
+            </div>
+            <div id="workers-list"></div>
+            <h2 style="margin-top: 30px; color: #3498db;">Recent Logs</h2>
+            <div id="activity-log" style="font-size: 14px; color: #ccc;"></div>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <div style="color: #888;">Identity Recognized</div>
+            <div class="modal-name" id="modal-name">User Name</div>
+            <div id="modal-action" style="font-weight: bold; margin-bottom: 10px;">CHECK IN</div>
+            <div class="modal-buttons">
+                <button class="btn-confirm" onclick="attendance.confirmAttendance()">CONFIRM</button>
+                <button class="btn-cancel" onclick="attendance.hideConfirmationModal()">RETRY</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- STORAGE ---
+        class Storage {
+            constructor() { this.db = null; }
+            async init() {
+                return new Promise((res) => {
+                    const req = indexedDB.open('BioIDv4', 1);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        db.createObjectStore('workers', { keyPath: 'name' });
+                        db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+                    };
+                    req.onsuccess = () => { this.db = req.result; res(); };
+                });
+            }
+            async addWorker(name) {
+                const tx = this.db.transaction('workers', 'readwrite');
+                tx.objectStore('workers').put({ name, added: Date.now() });
+            }
+            async getWorkers() {
+                return new Promise(res => {
+                    this.db.transaction('workers').objectStore('workers').getAll().onsuccess = (e) => res(e.target.result);
+                });
+            }
+            async addLog(workerName, action) {
+                const tx = this.db.transaction('logs', 'readwrite');
+                tx.objectStore('logs').add({ workerName, action, time: new Date().toLocaleTimeString() });
+            }
+            async getLogs() {
+                return new Promise(res => {
+                    this.db.transaction('logs').objectStore('logs').getAll().onsuccess = (e) => res(e.target.result.reverse().slice(0, 10));
+                });
+            }
+        }
+
+        const db = new Storage();
+
+        // --- CAMERA ---
+        class Camera {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.stream = null;
+            }
+            async start() {
+                const constraints = { 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                };
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.video.srcObject = this.stream;
+                    document.getElementById('status').textContent = "Ready: Align Face";
+                } catch (e) {
+                    document.getElementById('status').textContent = "Error: " + e.message;
+                    throw e;
+                }
+            }
+            stop() {
+                if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+            }
+        }
+
+        const cam = new Camera();
+
+        // --- ATTENDANCE ---
+        const attendance = {
+            currentWorker: '',
+            currentAction: '',
+            async simulateScan() {
+                const workers = await db.getWorkers();
+                if (workers.length === 0) {
+                    document.getElementById('status').textContent = "No workers registered!";
+                    return;
+                }
+                
+                document.getElementById('status').textContent = "Scanning...";
+                setTimeout(() => {
+                    const randomUser = workers[Math.floor(Math.random() * workers.length)];
+                    this.currentWorker = randomUser.name;
+                    this.currentAction = "CHECK IN";
+                    
+                    document.getElementById('modal-name').textContent = this.currentWorker;
+                    document.getElementById('confirmation-modal').classList.add('active');
+                }, 2000);
+            },
+            async confirmAttendance() {
+                await db.addLog(this.currentWorker, this.currentAction);
+                this.hideConfirmationModal();
+                document.getElementById('status').textContent = "✓ Success!";
+                setTimeout(() => document.getElementById('status').textContent = "Ready: Align Face", 2000);
+            },
+            hideConfirmationModal() {
+                document.getElementById('confirmation-modal').classList.remove('active');
+            }
+        };
+
+        // --- ADMIN ---
+        const admin = {
+            async addWorker() {
+                const input = document.getElementById('new-worker-name');
+                if (input.value) {
+                    await db.addWorker(input.value);
+                    input.value = '';
+                    this.render();
+                }
+            },
+            async render() {
+                const workers = await db.getWorkers();
+                document.getElementById('workers-list').innerHTML = workers.map(w => `
+                    <div class="worker-item"><span>${w.name}</span> <small>Active</small></div>
+                `).join('');
+
+                const logs = await db.getLogs();
+                document.getElementById('activity-log').innerHTML = logs.map(l => `
+                    <p>${l.time} - ${l.workerName} (${l.action})</p>
+                `).join('');
+            }
+        };
+
+        // --- APP FLOW ---
+        const app = {
+            async goToUserTerminal() {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('user-terminal').classList.add('active');
+                await db.init();
+                try {
+                    await cam.start();
+                    attendance.simulateScan();
+                } catch(e) {}
+            },
+            async goToAdmin() {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('admin-dashboard').classList.add('active');
+                await db.init();
+                admin.render();
+            },
+            goToLauncher() {
+                cam.stop();
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('launcher').classList.add('active');
+            }
+        };
+    </script>
+</body>
+</html>
