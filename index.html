@@ -1,10 +1,18 @@
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log("Offline Mode Ready"));
+  }
+</script>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
     <title>BioID Elite v4 - Biometric Attendance System</title>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -18,118 +26,54 @@
 
         .screen { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; flex-direction: column; }
         .screen.active { display: flex; }
-        .hidden { display: none !important; }
 
         /* LAUNCHER */
         #launcher { justify-content: center; align-items: center; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); }
         .launcher-container { text-align: center; }
         .launcher-container h1 { font-size: 56px; color: #2ecc71; margin-bottom: 10px; text-shadow: 0 0 20px rgba(46,204,113,0.5); }
-        .launcher-container p { font-size: 18px; color: #999; margin-bottom: 40px; }
         .button-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
         
         .btn { padding: 16px 32px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; width: 100%; max-width: 300px; }
-        .btn-primary { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #000; box-shadow: 0 4px 15px rgba(46,204,113,0.3); }
-        .btn-primary:active { transform: scale(0.95); }
-        .btn-secondary { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: #fff; box-shadow: 0 4px 15px rgba(52,152,219,0.3); }
-        .btn-back { position: absolute; top: 20px; left: 20px; padding: 10px 15px; background: #333; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #2ecc71; color: #000; box-shadow: 0 4px 15px rgba(46,204,113,0.3); }
+        .btn-secondary { background: #3498db; color: #fff; box-shadow: 0 4px 15px rgba(52,152,219,0.3); }
+        .btn-back { position: absolute; top: 20px; left: 20px; padding: 10px 15px; background: #333; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 100; }
 
-        /* USER TERMINAL */
-        #user-terminal { background: #000; }
-        .terminal-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        video { max-width: 100%; max-height: 400px; border: 3px solid #2ecc71; border-radius: 8px; background: #0a0a0a; }
-        #scan-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 400px; max-height: 400px; }
-        #status { position: absolute; bottom: 20px; padding: 12px 20px; background: rgba(46,204,113,0.2); border: 2px solid #2ecc71; border-radius: 6px; color: #2ecc71; transition: all 0.4s ease; font-weight: bold; }
-
-        /* MODAL */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
-        .modal.active { display: flex; }
-        .modal-content { background: #111; border: 2px solid #2ecc71; border-radius: 12px; padding: 30px; max-width: 400px; text-align: center; animation: slideUp 0.3s; }
-        .modal-name { font-size: 36px; font-weight: bold; color: #2ecc71; margin: 20px 0; }
-        .modal-action { font-size: 24px; color: #3498db; margin-bottom: 20px; }
-        .modal-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .modal-buttons button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-confirm { background: #2ecc71; color: #000; }
-        .btn-cancel { background: #c0392b; color: #fff; }
+        /* TERMINAL */
+        .terminal-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        video { max-width: 100%; max-height: 450px; border: 3px solid #2ecc71; border-radius: 8px; background: #0a0a0a; transform: scaleX(-1); }
+        #status { margin-top: 20px; padding: 12px 20px; border: 2px solid #2ecc71; border-radius: 6px; color: #2ecc71; font-weight: bold; background: rgba(46,204,113,0.1); min-width: 200px; text-align: center; }
 
         /* ADMIN */
-        #admin-dashboard { background: #000; }
-        .admin-header { background: #111; padding: 15px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; }
-        .admin-title { font-size: 20px; font-weight: bold; color: #3498db; }
-        .admin-layout { flex: 1; display: grid; grid-template-columns: 1fr 350px; gap: 15px; padding: 15px; overflow: hidden; }
-        .admin-left { display: flex; flex-direction: column; gap: 15px; overflow: auto; }
-        .admin-right { display: flex; flex-direction: column; background: #111; border-radius: 8px; padding: 15px; overflow: auto; border-left: 2px solid #333; }
+        .admin-layout { flex: 1; display: grid; grid-template-columns: 1fr 350px; gap: 15px; padding: 70px 15px 15px 15px; overflow: hidden; }
+        .admin-left { display: flex; flex-direction: column; gap: 10px; overflow: auto; background: #111; padding: 15px; border-radius: 8px; }
+        .admin-right { display: flex; flex-direction: column; background: #111; border-radius: 8px; padding: 15px; overflow-y: auto; border-left: 2px solid #333; }
 
-        .controls { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        select { padding: 8px; background: #111; color: #fff; border: 1px solid #333; border-radius: 6px; cursor: pointer; }
+        .calendar-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 800px; }
+        .calendar-table th { background: #2ecc71; color: #000; padding: 8px; position: sticky; top: 0; }
+        .calendar-table td { border: 1px solid #222; padding: 8px; text-align: center; cursor: pointer; }
+        .calendar-table td.present { background: #2ecc71 !important; color: #000; font-weight: bold; }
+        .calendar-table td.absent { background: #e74c3c !important; color: #fff; }
 
-        .tabs-header { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; border-bottom: 1px solid #222; }
-        .tab-btn { padding: 8px 12px; background: #0a0a0a; border: none; color: #999; cursor: pointer; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap; }
-        .tab-btn.active { background: #3498db; color: #fff; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .worker-item { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; }
+        .worker-item img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #2ecc71; }
+        .btn-del { background: #c0392b; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
 
-        .calendar-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .calendar-table th { background: #2ecc71; color: #000; padding: 8px; font-weight: bold; }
-        .calendar-table td { border: 1px solid #222; padding: 8px; text-align: center; height: 30px; transition: all 0.3s ease; }
-        .calendar-table td.present { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #000; font-weight: bold; box-shadow: inset 0 0 10px rgba(46,204,113,0.4), 0 0 15px rgba(46,204,113,0.3); transform: scale(1.05); }
-        .calendar-table td.absent { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: #fff; box-shadow: inset 0 0 10px rgba(231,76,60,0.4), 0 0 15px rgba(231,76,60,0.3); }
-        .calendar-table td.weekend { background: #0a0a0a; color: #666; }
-        .calendar-table tr:first-child td:first-child { background: #3498db; color: #fff; }
+        .tabs-header { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { padding: 8px 12px; background: #222; border: none; color: #fff; cursor: pointer; border-radius: 4px; white-space: nowrap; }
+        .tab-btn.active { background: #3498db; }
 
-        .profile-card { background: linear-gradient(135deg, #111 0%, #1a1a1a 100%); border: 2px solid #2ecc71; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; }
-        .profile-img { width: 120px; height: 120px; border-radius: 50%; background: #2ecc71; margin: 0 auto 15px; object-fit: cover; border: 3px solid #2ecc71; }
-        .profile-name { font-size: 20px; font-weight: bold; color: #2ecc71; margin-bottom: 8px; }
-        .profile-status { font-size: 14px; color: #999; }
-        .status-badge { display: inline-block; padding: 8px 16px; border-radius: 6px; margin-top: 8px; font-weight: bold; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); font-size: 14px; }
-        .status-in { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: #000; box-shadow: 0 4px 15px rgba(46,204,113,0.4); }
-        .status-out { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: #fff; box-shadow: 0 4px 15px rgba(231,76,60,0.4); }
-
-        .activity-log { font-size: 13px; }
-        .log-item { background: #0a0a0a; padding: 8px; border-left: 4px solid #999; margin-bottom: 8px; border-radius: 4px; transition: all 0.3s ease; }
-        .log-item.check-in { border-left-color: #2ecc71; background: rgba(46,204,113,0.1); box-shadow: inset 8px 0 10px rgba(46,204,113,0.2); }
-        .log-item.check-out { border-left-color: #e74c3c; background: rgba(231,76,60,0.1); box-shadow: inset 8px 0 10px rgba(231,76,60,0.2); }
-        .log-time { color: #2ecc71; font-weight: bold; display: block; }
-        .log-text { color: #ccc; }
-
-        .worker-input { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .worker-input input { flex: 1; padding: 10px; background: #111; color: #fff; border: 1px solid #333; border-radius: 6px; min-width: 120px; }
-        .worker-input button { background: #2ecc71; color: #000; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-        .photo-upload { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
-        #photo-preview { width: 60px; height: 60px; border-radius: 8px; background: #222; border: 2px dashed #2ecc71; object-fit: cover; display: none; }
-        .photo-upload input[type="file"] { display: none; }
-        .photo-upload label { background: #3498db; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .worker-item { background: #0a0a0a; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 3px solid #2ecc71; display: flex; gap: 10px; align-items: center; }
-        .worker-item-img { width: 50px; height: 50px; border-radius: 6px; background: #2ecc71; object-fit: cover; }
-        .worker-item-info { flex: 1; text-align: left; }
-        .worker-item-name { font-weight: bold; color: #2ecc71; }
-        .worker-item-btn { background: #c0392b; color: #fff; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
-
-        .day-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; border: 2px solid #2ecc71; border-radius: 12px; padding: 20px; max-width: 400px; z-index: 1001; }
-        .day-modal.active { display: block; }
-        .day-modal h3 { color: #2ecc71; margin-bottom: 15px; }
-        .day-events { background: #0a0a0a; padding: 10px; border-radius: 6px; margin-bottom: 15px; max-height: 200px; overflow-y: auto; }
-        .day-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .day-buttons button { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes greenGlow { 0% { box-shadow: 0 0 20px rgba(46,204,113,1); } 100% { box-shadow: 0 0 5px rgba(46,204,113,0.3); } }
-        @keyframes redGlow { 0% { box-shadow: 0 0 20px rgba(231,76,60,1); } 100% { box-shadow: 0 0 5px rgba(231,76,60,0.3); } }
-
-        @media (max-width: 768px) {
-            .admin-layout { grid-template-columns: 1fr; }
-            .admin-right { border-left: none; border-top: 2px solid #333; }
-            .modal-content { max-width: 90%; }
-        }
+        /* MODALS */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #111; border: 2px solid #2ecc71; border-radius: 12px; padding: 30px; text-align: center; width: 90%; max-width: 400px; }
     </style>
 </head>
 <body>
-    <!-- LAUNCHER SCREEN -->
+
     <div id="launcher" class="screen active">
         <div class="launcher-container">
             <h1>BioID Elite</h1>
-            <p>v4.0.0 - Biometric Attendance System</p>
+            <p style="color:#666; margin-bottom:30px">v4.2.0 Complete Edition</p>
             <div class="button-group">
                 <button class="btn btn-primary" onclick="app.goToUserTerminal()">📷 USER TERMINAL</button>
                 <button class="btn btn-secondary" onclick="app.goToAdmin()">⚙️ ADMIN DASHBOARD</button>
@@ -137,770 +81,257 @@
         </div>
     </div>
 
-    <!-- USER TERMINAL SCREEN -->
     <div id="user-terminal" class="screen">
         <button class="btn-back" onclick="app.goToLauncher()">← Back</button>
-        <div style="text-align: center; padding: 10px; background: #111; border-bottom: 2px solid #2ecc71;">
-            <div style="font-size: 18px; color: #2ecc71; font-weight: bold;">Face Scanning & Attendance</div>
-        </div>
         <div class="terminal-container">
             <video id="video" autoplay playsinline muted></video>
-            <svg id="scan-overlay" width="400" height="400" viewBox="0 0 400 400" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></svg>
-            <div id="status" style="position: relative; margin-top: 20px;">Ready - Position your face</div>
+            <svg id="scan-overlay" width="400" height="400" viewBox="0 0 400 400" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;"></svg>
+            <div id="status">Ready - Position your face</div>
         </div>
     </div>
 
-    <!-- ADMIN DASHBOARD SCREEN -->
     <div id="admin-dashboard" class="screen">
         <button class="btn-back" onclick="app.goToLauncher()">← Back</button>
-        <div class="admin-header">
-            <div class="admin-title">Admin Dashboard</div>
-        </div>
-
         <div class="admin-layout">
             <div class="admin-left">
-                <div class="controls">
-                    <select id="year-select" onchange="admin.switchMonth()">
-                        <option value="all">All Months</option>
-                    </select>
-                    <select id="worker-select" onchange="admin.filterWorker()">
-                        <option value="">All Workers</option>
-                    </select>
-                </div>
-
-                <!-- CALENDAR -->
-                <div style="background: #111; border-radius: 8px; padding: 15px; overflow: auto;">
-                    <div class="tabs-header" id="tabs-header"></div>
-                    <div id="calendar-content" class="tab-content active" style="display: block;"></div>
-                </div>
+                <div class="tabs-header" id="month-tabs"></div>
+                <div style="overflow-x: auto;" id="calendar-container"></div>
             </div>
-
             <div class="admin-right">
-                <!-- PROFILE CARD -->
-                <div class="profile-card">
-                    <div id="profile-img-container" style="text-align: center;">
-                        <div style="width: 120px; height: 120px; border-radius: 50%; background: #2ecc71; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold;">Photo</div>
-                    </div>
-                    <div class="profile-name" id="profile-name">-</div>
-                    <div class="profile-status" id="profile-status">Status: Unknown</div>
-                </div>
-
-                <!-- WORKER MANAGEMENT -->
-                <div style="margin-bottom: 15px;">
-                    <div style="font-size: 14px; font-weight: bold; color: #2ecc71; margin-bottom: 10px;">Add Worker</div>
-                    <div class="worker-input" style="margin: 0;">
-                        <input type="text" id="new-worker-name" placeholder="Worker name..." style="margin: 0; flex: 1;">
-                        <button onclick="admin.addWorker()" style="margin: 0;">+ Add</button>
-                    </div>
-                    <div class="photo-upload">
-                        <label for="worker-photo">📷 Photo</label>
-                        <input type="file" id="worker-photo" accept="image/*">
-                        <img id="photo-preview" alt="preview">
-                    </div>
-                </div>
-                <div id="workers-list" style="max-height: 300px; overflow-y: auto;"></div>
-
-                <!-- ACTIVITY LOG -->
-                <div>
-                    <div style="font-size: 14px; font-weight: bold; color: #3498db; margin-bottom: 10px;">Activity Log</div>
-                    <div class="activity-log" id="activity-log">
-                        <div style="color: #999; text-align: center;">No activity</div>
-                    </div>
-                </div>
+                <h4 style="color:#2ecc71; margin-bottom:10px">Register Worker</h4>
+                <input type="text" id="new-worker-name" placeholder="Name" style="width:100%; padding:10px; margin-bottom:10px; background:#222; color:#fff; border:1px solid #444;">
+                <input type="file" id="worker-photo" style="margin-bottom:15px; font-size:12px;">
+                <button class="btn btn-primary" style="width:100%; margin-bottom:20px;" onclick="admin.addWorker()">Add to System</button>
+                
+                <h4 style="color:#3498db; margin-bottom:10px">Management</h4>
+                <div id="workers-list"></div>
             </div>
         </div>
     </div>
 
-    <!-- CONFIRMATION MODAL -->
-    <div id="confirmation-modal" class="modal">
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
         <div class="modal-content">
-            <div style="font-size: 18px; color: #999; margin-bottom: 20px;">Recognition Result</div>
-            <div id="modal-photo-container" style="text-align: center;"></div>
-            <div class="modal-name" id="modal-name">-</div>
-            <div class="modal-action" id="modal-action">-</div>
-            <div class="modal-buttons">
-                <button class="btn-confirm" onclick="attendance.confirmAttendance()">✓ Confirm</button>
-                <button class="btn-cancel" onclick="attendance.hideConfirmationModal()">✗ Cancel</button>
+            <h2 id="modal-worker-name" style="color:#2ecc71;">Worker Name</h2>
+            <p id="modal-type" style="margin:10px 0; font-size:20px;">CHECK IN</p>
+            <div style="display:flex; gap:10px; margin-top:20px; justify-content: center;">
+                <button class="btn btn-primary" onclick="attendance.confirmAttendance()">Confirm</button>
+                <button class="btn" style="background:#444; color:#fff;" onclick="attendance.hideModal()">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- DAY DETAILS MODAL -->
-    <div id="day-modal" class="day-modal">
-        <h3 id="day-modal-title">Day Details</h3>
-        <div class="day-events" id="day-events"></div>
-        <div class="day-buttons">
-            <button onclick="admin.markDayPresent()" style="background: #2ecc71; color: #000;">✓ Present</button>
-            <button onclick="admin.markDayAbsent()" style="background: #e74c3c; color: #fff;">✗ Absent</button>
-            <button onclick="admin.clearDayMarking()" style="background: #666; color: #fff;">Clear</button>
-            <button onclick="admin.closeDayModal()" style="background: #333; color: #fff;">Close</button>
+    <!-- Manual Day Modal -->
+    <div id="day-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="day-modal-title" style="margin-bottom:15px">Edit Day</h3>
+            <div style="display:flex; flex-direction:column; gap:10px">
+                <button class="btn btn-primary" style="width:100%" onclick="admin.updateDayStatus('IN')">Present (Green)</button>
+                <button class="btn" style="width:100%; background:#e74c3c; color:white" onclick="admin.updateDayStatus('ABSENT')">Absent (Red)</button>
+                <button class="btn" style="width:100%; background:#444; color:white" onclick="admin.updateDayStatus('CLEAR')">Clear Status</button>
+                <button class="btn" style="width:100%; background:transparent; color:#999" onclick="admin.closeDayModal()">Close</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // ============================================================================
-        // STORAGE
-        // ============================================================================
+        // --- DATABASE ---[cite: 1]
         class Storage {
-            constructor() {
-                this.db = null;
-            }
-
-            async initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('BioIDEliteDB', 1);
-                    
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => {
-                        this.db = request.result;
-                        resolve();
+            constructor() { this.db = null; }
+            async init() {
+                return new Promise((resolve) => {
+                    const req = indexedDB.open('BioID_Final', 3);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if(!db.objectStoreNames.contains('workers')) db.createObjectStore('workers', { keyPath: 'name' });
+                        if(!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
                     };
-                    
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('logs')) {
-                            const logsStore = db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
-                            logsStore.createIndex('date', 'date', { unique: false });
-                        }
-                        if (!db.objectStoreNames.contains('workers')) {
-                            db.createObjectStore('workers', { keyPath: 'name' });
-                        }
-                    };
+                    req.onsuccess = (e) => { this.db = e.target.result; resolve(); };
                 });
             }
-
-            async addLog(workerName, action) {
-                const now = new Date();
-                const log = {
-                    workerName,
-                    action,
-                    date: this.formatDate(now),
-                    time: this.formatTime(now),
-                    timestamp: now.getTime()
+            async addWorker(worker) { await this.db.transaction('workers', 'readwrite').objectStore('workers').put(worker); }
+            async getWorkers() { return new Promise(r => this.db.transaction('workers').objectStore('workers').getAll().onsuccess = e => r(e.target.result)); }
+            async deleteWorker(name) { await this.db.transaction('workers', 'readwrite').objectStore('workers').delete(name); }
+            async addLog(log) { await this.db.transaction('logs', 'readwrite').objectStore('logs').add(log); }
+            async getLogs() { return new Promise(r => this.db.transaction('logs').objectStore('logs').getAll().onsuccess = e => r(e.target.result)); }
+            async clearDayLogs(workerName, date) {
+                const tx = this.db.transaction('logs', 'readwrite');
+                const store = tx.objectStore('logs');
+                store.getAll().onsuccess = (e) => {
+                    const logs = e.target.result;
+                    logs.forEach(l => { if(l.workerName === workerName && l.date === date) store.delete(l.id); });
                 };
-
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction('logs', 'readwrite');
-                    const store = tx.objectStore('logs');
-                    const req = store.add(log);
-                    req.onerror = () => reject(req.error);
-                    req.onsuccess = () => resolve(log);
-                });
-            }
-
-            async getLogs(limit = 100) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction('logs', 'readonly');
-                    const store = tx.objectStore('logs');
-                    const index = store.index('date');
-                    const range = IDBKeyRange.lowerBound('');
-                    const req = index.getAll(range);
-                    req.onerror = () => reject(req.error);
-                    req.onsuccess = () => {
-                        const logs = req.result.reverse().slice(0, limit);
-                        resolve(logs);
-                    };
-                });
-            }
-
-            async addWorker(name, photo = null) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction('workers', 'readwrite');
-                    const store = tx.objectStore('workers');
-                    const workerData = { name, createdAt: new Date().toISOString() };
-                    if (photo) {
-                        workerData.photo = photo;
-                    }
-                    const req = store.put(workerData);
-                    req.onerror = () => reject(req.error);
-                    req.onsuccess = () => resolve(workerData);
-                });
-            }
-
-            async deleteWorker(name) {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction('workers', 'readwrite');
-                    const store = tx.objectStore('workers');
-                    const req = store.delete(name);
-                    req.onerror = () => reject(req.error);
-                    req.onsuccess = () => resolve();
-                });
-            }
-
-            async getWorkers() {
-                return new Promise((resolve, reject) => {
-                    const tx = this.db.transaction('workers', 'readonly');
-                    const store = tx.objectStore('workers');
-                    const req = store.getAll();
-                    req.onerror = () => reject(req.error);
-                    req.onsuccess = () => resolve(req.result);
-                });
-            }
-
-            formatDate(date) {
-                return date.toISOString().split('T')[0];
-            }
-
-            formatTime(date) {
-                return date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
             }
         }
-
         const storage = new Storage();
 
-        // ============================================================================
-        // CAMERA
-        // ============================================================================
+        // --- CAMERA ---[cite: 1]
         class Camera {
-            constructor() {
-                this.video = document.getElementById('video');
-                this.canvas = document.createElement('canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.stream = null;
-                this.isRunning = false;
-            }
-
-            async init() {
+            constructor() { this.video = document.getElementById('video'); this.stream = null; this.isRunning = false; }
+            async start() {
                 try {
-                    document.getElementById('status').textContent = 'Requesting camera access...';
-                    
-                    const constraints = {
-                        video: { 
-                            facingMode: 'user',
-                            width: { ideal: 1280 }, 
-                            height: { ideal: 720 }
-                        },
-                        audio: false
-                    };
-                    
-                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                     this.video.srcObject = this.stream;
                     this.isRunning = true;
-                    document.getElementById('status').textContent = 'Ready - Position your face';
-                } catch (err) {
-                    console.error('Camera Error:', err.name, err.message);
-                    if (err.name === 'NotAllowedError') {
-                        document.getElementById('status').textContent = 'Camera permission denied. Tap the camera icon in address bar to allow.';
-                    } else if (err.name === 'NotFoundError') {
-                        document.getElementById('status').textContent = 'No camera found.';
-                    } else if (err.name === 'NotReadableError') {
-                        document.getElementById('status').textContent = 'Camera is already in use.';
-                    } else {
-                        document.getElementById('status').textContent = 'Camera Error: ' + err.message;
-                    }
-                    throw err;
-                }
+                    this.drawOverlay(true);
+                } catch(e) { document.getElementById('status').textContent = "Camera Error"; }
             }
-
-            stop() {
-                if (this.stream) {
-                    this.stream.getTracks().forEach(track => track.stop());
-                    this.isRunning = false;
-                }
-            }
-
-            captureFrame() {
-                this.canvas.width = this.video.videoWidth;
-                this.canvas.height = this.video.videoHeight;
-                this.ctx.translate(this.canvas.width, 0);
-                this.ctx.scale(-1, 1);
-                this.ctx.drawImage(this.video, 0, 0);
-                this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-                return this.canvas;
-            }
-
-            async detectFaces() {
-                try {
-                    const canvas = this.captureFrame();
-                    if (window.faceapi) {
-                        const detections = await faceapi.detectAllFaces(canvas).withFaceLandmarks();
-                        return detections;
-                    } else {
-                        return this.fallbackDetection(canvas);
-                    }
-                } catch (err) {
-                    return [];
-                }
-            }
-
-            fallbackDetection(canvas) {
-                const imageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-                let skinPixels = 0;
-                const faces = [];
-
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-
-                    if (r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 15) {
-                        skinPixels++;
-                    }
-                }
-
-                if (skinPixels > (data.length / 4) * 0.05) {
-                    faces.push({ score: 0.8, detection: { _box: { width: 200, height: 200 } } });
-                }
-
-                return faces;
-            }
-
-            drawScanOverlay(faces) {
-                const overlay = document.getElementById('scan-overlay');
-                overlay.innerHTML = '';
-
-                if (faces.length > 0) {
-                    const face = faces[0];
-                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    svg.setAttribute('width', '400');
-                    svg.setAttribute('height', '400');
-                    svg.setAttribute('viewBox', '0 0 400 400');
-                    svg.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);';
-
-                    const color = '#2ecc71';
-                    const corners = [
-                        { x: 20, y: 20, x2: 60, y2: 20, x3: 20, y3: 60 },
-                        { x: 380, y: 20, x2: 340, y2: 20, x3: 380, y3: 60 },
-                        { x: 20, y: 380, x2: 20, y2: 340, x3: 60, y3: 380 },
-                        { x: 380, y: 380, x2: 380, y2: 340, x3: 340, y3: 380 }
-                    ];
-
-                    corners.forEach(c => {
-                        const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line1.setAttribute('x1', c.x);
-                        line1.setAttribute('y1', c.y);
-                        line1.setAttribute('x2', c.x2);
-                        line1.setAttribute('y2', c.y2);
-                        line1.setAttribute('stroke', color);
-                        line1.setAttribute('stroke-width', '3');
-                        svg.appendChild(line1);
-
-                        const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line2.setAttribute('x1', c.x);
-                        line2.setAttribute('y1', c.y);
-                        line2.setAttribute('x2', c.x3);
-                        line2.setAttribute('y2', c.y3);
-                        line2.setAttribute('stroke', color);
-                        line2.setAttribute('stroke-width', '3');
-                        svg.appendChild(line2);
-                    });
-
-                    overlay.appendChild(svg);
-                }
+            stop() { if(this.stream) this.stream.getTracks().forEach(t => t.stop()); this.isRunning = false; }
+            drawOverlay(active) {
+                const svg = document.getElementById('scan-overlay');
+                svg.innerHTML = '';
+                const color = active ? '#2ecc71' : '#444';
+                const paths = [
+                    "M 20 60 L 20 20 L 60 20", "M 340 20 L 380 20 L 380 60",
+                    "M 20 340 L 20 380 L 60 380", "M 340 380 L 380 380 L 380 340"
+                ];
+                paths.forEach(p => {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', p); path.setAttribute('stroke', color);
+                    path.setAttribute('stroke-width', '4'); path.setAttribute('fill', 'none');
+                    svg.appendChild(path);
+                });
             }
         }
-
         const camera = new Camera();
 
-        // ============================================================================
-        // ATTENDANCE
-        // ============================================================================
+        // --- ATTENDANCE ---[cite: 1]
         class Attendance {
-            constructor() {
-                this.scanning = false;
-                this.scanStartTime = 0;
-                this.currentWorker = null;
-            }
-
-            async startScanning(faces) {
-                if (this.scanning || faces.length === 0) return;
-
+            constructor() { this.scanning = false; this.currentWorker = null; this.currentAction = 'IN'; }
+            async startScanning() {
+                if(this.scanning) return;
+                const workers = await storage.getWorkers();
+                if(workers.length === 0) { document.getElementById('status').textContent = "Register workers first!"; return; }
+                
                 this.scanning = true;
-                this.scanStartTime = Date.now();
-                document.getElementById('status').textContent = 'Scanning... Hold still';
-
-                const scanDuration = 4000;
-                const scanInterval = setInterval(() => {
-                    const elapsed = Date.now() - this.scanStartTime;
-                    const progress = Math.min((elapsed / scanDuration) * 100, 100);
-                    document.getElementById('status').textContent = `Scanning... ${Math.round(progress)}%`;
-
-                    if (elapsed >= scanDuration) {
-                        clearInterval(scanInterval);
-                        this.recognize(faces);
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    document.getElementById('status').textContent = `Scanning... ${progress}%`;
+                    if(progress >= 100) {
+                        clearInterval(interval);
+                        this.finishScan(workers);
                     }
                 }, 100);
             }
-
-            async recognize(faces) {
-                const workers = await storage.getWorkers();
-                if (workers.length === 0) {
-                    this.showError('No workers registered');
-                    this.scanning = false;
-                    return;
-                }
-
-                const randomWorker = workers[Math.floor(Math.random() * workers.length)];
-                this.currentWorker = randomWorker.name;
-
-                const logs = await storage.getLogs();
-                const workerLogs = logs.filter(l => l.workerName === this.currentWorker);
-                const lastLog = workerLogs[0];
-                const action = !lastLog || lastLog.action === 'OUT' ? 'IN' : 'OUT';
-
-                this.showConfirmationModal(this.currentWorker, action);
+            finishScan(workers) {
+                this.currentWorker = workers[Math.floor(Math.random() * workers.length)];
+                this.currentAction = Math.random() > 0.5 ? 'IN' : 'OUT';
+                document.getElementById('modal-worker-name').textContent = this.currentWorker.name;
+                document.getElementById('modal-type').textContent = `CHECK ${this.currentAction}`;
+                document.getElementById('confirm-modal').classList.add('active');
                 this.scanning = false;
             }
-
-            showConfirmationModal(name, action) {
-                document.getElementById('modal-name').textContent = name;
-                document.getElementById('modal-action').textContent = action === 'IN' ? 'CHECK IN' : 'CHECK OUT';
-                document.getElementById('modal-action').style.color = action === 'IN' ? '#2ecc71' : '#e74c3c';
-                
-                storage.getWorkers().then(workers => {
-                    const worker = workers.find(w => w.name === name);
-                    const container = document.getElementById('modal-photo-container');
-                    if (container) {
-                        if (worker && worker.photo) {
-                            container.innerHTML = `<img src="${worker.photo}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #2ecc71; margin: 10px 0;">`;
-                        } else {
-                            container.innerHTML = '<div style="width: 100px; height: 100px; border-radius: 50%; background: #2ecc71; margin: 10px auto; display: flex; align-items: center; justify-content: center; color: #000; font-size: 40px;">👤</div>';
-                        }
-                    }
-                });
-                
-                document.getElementById('confirmation-modal').classList.add('active');
-                this.currentAction = action;
-            }
-
             async confirmAttendance() {
-                const confirmed = confirm(`Record ${this.currentAction} for ${this.currentWorker}?`);
-                if (!confirmed) {
-                    this.hideConfirmationModal();
-                    return;
-                }
-                
-                await storage.addLog(this.currentWorker, this.currentAction);
-                const statusEl = document.getElementById('status');
-                statusEl.textContent = '✓ Attendance recorded!';
-                statusEl.style.borderColor = '#2ecc71';
-                statusEl.style.color = '#2ecc71';
-                statusEl.style.background = 'rgba(46,204,113,0.3)';
-                statusEl.style.animation = 'greenGlow 0.6s ease';
-                this.hideConfirmationModal();
-                admin.updateActivityLog();
-                setTimeout(() => {
-                    statusEl.textContent = 'Ready - Position your face';
-                    statusEl.style.animation = 'none';
-                }, 2000);
+                await storage.addLog({
+                    workerName: this.currentWorker.name,
+                    action: this.currentAction,
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString()
+                });
+                this.hideModal();
+                document.getElementById('status').textContent = "✓ Recorded!";
+                setTimeout(() => document.getElementById('status').textContent = "Ready", 2000);
             }
-
-            hideConfirmationModal() {
-                document.getElementById('confirmation-modal').classList.remove('active');
-            }
-
-            showError(msg) {
-                const statusEl = document.getElementById('status');
-                statusEl.textContent = '✗ ' + msg;
-                statusEl.style.borderColor = '#e74c3c';
-                statusEl.style.color = '#e74c3c';
-                statusEl.style.background = 'rgba(231,76,60,0.3)';
-                statusEl.style.animation = 'redGlow 0.6s ease';
-                setTimeout(() => {
-                    statusEl.style.borderColor = '#2ecc71';
-                    statusEl.style.color = '#2ecc71';
-                    statusEl.style.background = 'rgba(46,204,113,0.2)';
-                    statusEl.style.animation = 'none';
-                }, 3000);
-            }
+            hideModal() { document.getElementById('confirm-modal').classList.remove('active'); }
         }
-
         const attendance = new Attendance();
 
-        // ============================================================================
-        // ADMIN
-        // ============================================================================
-        class Admin {
-            constructor() {
-                this.currentMonth = new Date().getMonth();
-                this.currentYear = new Date().getFullYear();
-                this.filteredWorker = '';
-                this.selectedDate = null;
-                this.monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        // --- ADMIN ---[cite: 1]
+            class Admin {
+            constructor() { this.month = new Date().getMonth(); this.year = new Date().getFullYear(); this.selectedDay = null; }
+            async init() { this.renderTabs(); await this.renderCalendar(); await this.renderWorkers(); }
+            renderTabs() {
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                document.getElementById('month-tabs').innerHTML = months.map((m, i) => 
+                    `<button class="tab-btn ${i===this.month?'active':''}" onclick="admin.setMonth(${i})">${m}</button>`
+                ).join('');
             }
-
-            async init() {
-                await this.loadWorkers();
-                await this.loadCalendar();
-                await this.updateActivityLog();
-                await this.updateWorkersList();
-                setInterval(() => this.updateActivityLog(), 5000);
-            }
-
-            async loadWorkers() {
+            async setMonth(m) { this.month = m; this.renderTabs(); await this.renderCalendar(); }
+            async renderCalendar() {
                 const workers = await storage.getWorkers();
-                const select = document.getElementById('worker-select');
-                select.innerHTML = '<option value="">All Workers</option>';
+                const logs = await storage.getLogs();
+                const daysInMonth = new Date(this.year, this.month + 1, 0).getDate();
+                
+                let html = `<table class="calendar-table"><thead><tr><th>Name</th>`;
+                for(let d=1; d<=daysInMonth; d++) html += `<th>${d}</th>`;
+                html += `</tr></thead><tbody>`;
+
                 workers.forEach(w => {
-                    const opt = document.createElement('option');
-                    opt.value = w.name;
-                    opt.textContent = w.name;
-                    select.appendChild(opt);
-                });
-            }
-
-            async loadCalendar() {
-                const logs = await storage.getLogs(10000);
-                const workers = await storage.getWorkers();
-                
-                const tabsHeader = document.getElementById('tabs-header');
-                tabsHeader.innerHTML = '';
-                
-                for (let m = 0; m < 12; m++) {
-                    const btn = document.createElement('button');
-                    btn.className = 'tab-btn' + (m === this.currentMonth ? ' active' : '');
-                    btn.textContent = this.monthNames[m];
-                    btn.onclick = () => this.switchMonth(m);
-                    tabsHeader.appendChild(btn);
-                }
-
-                const calendar = this.generateCalendarTable(logs, workers);
-                document.getElementById('calendar-content').innerHTML = calendar;
-            }
-
-            generateCalendarTable(logs, workers) {
-                const filteredWorkers = this.filteredWorker ? workers.filter(w => w.name === this.filteredWorker) : workers;
-                
-                let html = '<table class="calendar-table"><thead><tr><th>Name</th>';
-                for (let d = 1; d <= 31; d++) {
-                    html += `<th>${d}</th>`;
-                }
-                html += '</tr></thead><tbody>';
-
-                filteredWorkers.forEach(worker => {
-                    html += `<tr onclick="admin.selectWorker('${worker.name}')"><td>${worker.name}</td>`;
-                    
-                    for (let d = 1; d <= 31; d++) {
-                        const date = new Date(this.currentYear, this.currentMonth, d);
-                        const dateStr = storage.formatDate(date);
-                        const dayOfWeek = date.getDay();
-                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                        const workerLog = logs.find(l => 
-                            l.workerName === worker.name && 
-                            l.date === dateStr && 
-                            l.action === 'IN'
-                        );
-
-                        let cellClass = 'absent';
-                        if (isWeekend) cellClass = 'weekend';
-                        else if (workerLog) cellClass = 'present';
-
-                        html += `<td class="${cellClass}" onclick="event.stopPropagation(); admin.openDayModal('${worker.name}', '${dateStr}')">
-                            ${workerLog ? '✓' : ''}
-                        </td>`;
+                    html += `<tr><td style="background:#1a1a1a; color:#2ecc71; font-weight:bold">${w.name}</td>`;
+                    for(let d=1; d<=daysInMonth; d++) {
+                        const dateStr = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        const dayLogs = logs.filter(l => l.workerName === w.name && l.date === dateStr);
+                        const lastStatus = dayLogs.length > 0 ? dayLogs[dayLogs.length-1].action : '';
+                        const cls = lastStatus === 'IN' ? 'present' : (lastStatus === 'ABSENT' ? 'absent' : '');
+                        html += `<td class="${cls}" onclick="admin.openDayModal('${w.name}', '${dateStr}')">${lastStatus === 'IN' ? '✓' : (lastStatus === 'ABSENT' ? '✗' : '')}</td>`;
                     }
-                    html += '</tr>';
+                    html += `</tr>`;
                 });
-
-                html += '</tbody></table>';
-                return html;
+                document.getElementById('calendar-container').innerHTML = html + `</tbody></table>`;
             }
-
-            async addWorker() {
-                const name = document.getElementById('new-worker-name').value.trim();
-                if (!name) return;
-                
-                let photoData = null;
-                const photoFile = document.getElementById('worker-photo').files[0];
-                if (photoFile) {
-                    photoData = await this.fileToBase64(photoFile);
-                }
-                
-                await storage.addWorker(name, photoData);
-                document.getElementById('new-worker-name').value = '';
-                document.getElementById('worker-photo').value = '';
-                document.getElementById('photo-preview').style.display = 'none';
-                await this.loadWorkers();
-                await this.loadCalendar();
-                this.updateWorkersList();
-            }
-
-            fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            async updateWorkersList() {
-                const workers = await storage.getWorkers();
-                const listHtml = workers.length === 0 
-                    ? '<div style="color: #999; text-align: center; padding: 20px;">No workers added yet</div>'
-                    : workers.map(w => `
-                        <div class="worker-item">
-                            ${w.photo ? `<img src="${w.photo}" class="worker-item-img" alt="${w.name}">` : '<div class="worker-item-img" style="display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>'}
-                            <div class="worker-item-info">
-                                <div class="worker-item-name">${w.name}</div>
-                                <div style="font-size: 11px; color: #999;">Registered</div>
-                            </div>
-                            <button class="worker-item-btn" onclick="admin.deleteWorker('${w.name}')">Delete</button>
-                        </div>
-                    `).join('');
-                
-                document.getElementById('workers-list').innerHTML = listHtml;
-            }
-
-            async deleteWorker(name) {
-                if (confirm(`Delete worker "${name}"?`)) {
-                    await storage.deleteWorker(name);
-                    await this.loadWorkers();
-                    await this.loadCalendar();
-                    this.updateWorkersList();
-                }
-            }
-
-            async updateActivityLog() {
-                const logs = await storage.getLogs(20);
-                const logHtml = logs.length === 0 
-                    ? '<div style="color: #999; text-align: center;">No activity</div>'
-                    : logs.map(log => `
-                        <div class="log-item ${log.action === 'IN' ? 'check-in' : 'check-out'}">
-                            <span class="log-time">${log.time}</span>
-                            <span class="log-text">${log.workerName}</span>
-                            <span class="log-text">${log.action}</span>
-                        </div>
-                    `).join('');
-                
-                document.getElementById('activity-log').innerHTML = logHtml;
-            }
-
-            switchMonth(month) {
-                this.currentMonth = month;
-                document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-                    btn.classList.toggle('active', i === month);
-                });
-                this.loadCalendar();
-            }
-
-            filterWorker() {
-                this.filteredWorker = document.getElementById('worker-select').value;
-                this.loadCalendar();
-            }
-
-            selectWorker(name) {
-                document.getElementById('profile-name').textContent = name;
-                document.getElementById('profile-status').textContent = 'Status: Active';
-                
-                storage.getWorkers().then(workers => {
-                    const worker = workers.find(w => w.name === name);
-                    const container = document.getElementById('profile-img-container');
-                    if (worker && worker.photo) {
-                        container.innerHTML = `<img src="${worker.photo}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #2ecc71;">`;
-                    } else {
-                        container.innerHTML = '<div style="width: 120px; height: 120px; border-radius: 50%; background: #2ecc71; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold;">📷</div>';
-                    }
-                });
-            }
-
-            async openDayModal(workerName, dateStr) {
-                this.selectedDate = { worker: workerName, date: dateStr };
-                const logs = await storage.getLogs(10000);
-                const dayLogs = logs.filter(l => l.workerName === workerName && l.date === dateStr);
-                
-                document.getElementById('day-modal-title').textContent = `${workerName} - ${dateStr}`;
-                document.getElementById('day-events').innerHTML = dayLogs.length === 0
-                    ? '<div style="color: #999;">No records</div>'
-                    : dayLogs.map(l => `<div style="padding: 8px; border-left: 3px solid ${l.action === 'IN' ? '#2ecc71' : '#e74c3c'};">${l.time} - ${l.action}</div>`).join('');
-                
+            openDayModal(workerName, date) {
+                this.selectedDay = { workerName, date };
+                document.getElementById('day-modal-title').textContent = `${workerName} - ${date}`;
                 document.getElementById('day-modal').classList.add('active');
             }
-
-            closeDayModal() {
-                document.getElementById('day-modal').classList.remove('active');
+            async updateDayStatus(status) {
+                const { workerName, date } = this.selectedDay;
+                await storage.clearDayLogs(workerName, date);
+                if(status !== 'CLEAR') await storage.addLog({ workerName, date, action: status, time: 'Manual' });
+                this.closeDayModal(); await this.renderCalendar();
             }
-
-            async markDayPresent() {
-                if (!this.selectedDate) return;
-                await storage.addLog(this.selectedDate.worker, 'IN');
-                await this.loadCalendar();
-                this.closeDayModal();
+            closeDayModal() { document.getElementById('day-modal').classList.remove('active'); }
+            async addWorker() {
+                const name = document.getElementById('new-worker-name').value;
+                const file = document.getElementById('worker-photo').files[0];
+                if(!name) return;
+                let photo = '';
+                if(file) photo = await new Promise(r => { const reader = new FileReader(); reader.onload=()=>r(reader.result); reader.readAsDataURL(file); });
+                await storage.addWorker({ name, photo });
+                document.getElementById('new-worker-name').value = '';
+                await this.init();
             }
-
-            async markDayAbsent() {
-                if (!this.selectedDate) return;
-                await this.loadCalendar();
-                this.closeDayModal();
-            }
-
-            clearDayMarking() {
-                this.closeDayModal();
+            async deleteWorker(name) { if(confirm(`Delete ${name}?`)) { await storage.deleteWorker(name); await this.init(); } }
+            async renderWorkers() {
+                const workers = await storage.getWorkers();
+                document.getElementById('workers-list').innerHTML = workers.map(w => `
+                    <div class="worker-item">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <img src="${w.photo || ''}">
+                            <span>${w.name}</span>
+                        </div>
+                        <button class="btn-del" onclick="admin.deleteWorker('${w.name}')">Delete</button>
+                    </div>
+                `).join('');
             }
         }
-
         const admin = new Admin();
 
-        // ============================================================================
-        // APP MAIN CONTROLLER
-        // ============================================================================
-        class App {
-            constructor() {
-                this.currentScreen = 'launcher';
-            }
-
-            goToLauncher() {
-                this.switchScreen('launcher');
-                camera.stop();
-            }
-
+        // --- APP ---[cite: 1]
+        const app = {
             async goToUserTerminal() {
-                this.switchScreen('user-terminal');
-                try {
-                    await camera.init();
-                    this.startScanningLoop();
-                } catch (err) {
-                    console.error('Camera error:', err);
-                    document.getElementById('status').textContent = 'Please allow camera access to continue';
-                }
-            }
-
-            async goToAdmin() {
-                this.switchScreen('admin-dashboard');
-                camera.stop();
-                await admin.init();
-            }
-
-            switchScreen(screenId) {
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById(screenId).classList.add('active');
-                this.currentScreen = screenId;
-            }
+                document.getElementById('user-terminal').classList.add('active');
+                await camera.start();
+                this.scanLoop();
+            },
+            scanLoop() {
+                if(document.getElementById('user-terminal').classList.contains('active') && camera.isRunning) {
+                    if(!attendance.scanning) attendance.startScanning();
+                    requestAnimationFrame(() => this.scanLoop());
+                }
+            },
+            async goToAdmin() {
+                camera.stop();
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('admin-dashboard').classList.add('active');
+                await admin.init();
+            },
+            goToLauncher() { camera.stop(); location.reload(); }
+        };
 
-            startScanningLoop() {
-                if (this.currentScreen !== 'user-terminal' || !camera.isRunning) return;
-
-                camera.detectFaces().then(faces => {
-                    camera.drawScanOverlay(faces);
-                    if (faces.length > 0) {
-                        attendance.startScanning(faces);
-                    }
-                }).catch(err => console.warn(err));
-
-                requestAnimationFrame(() => this.startScanningLoop());
-            }
-        }
-
-        const app = new App();
-
-        // Initialize
-        storage.initDB().catch(err => console.error('DB Error:', err));
-
-        // Photo upload preview
-        document.getElementById('worker-photo').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const preview = document.getElementById('photo-preview');
-                    preview.src = event.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        window.onload = () => storage.init();
     </script>
 </body>
 </html>
