@@ -4,205 +4,216 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <title>BioID Fix Table</title>
+    <title>BioID Original Style</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
-        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; background: #000; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
+        
+        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; align-items: center; justify-content: center; background: #000; }
         .screen.active { display: flex; }
-        
-        /* Кнопки */
-        .btn { padding: 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 80%; max-width: 280px; margin: 10px auto; display: block; }
+
+        /* Стиль кнопок как в начале */
+        .btn { padding: 20px; border: none; border-radius: 15px; font-weight: bold; width: 85%; max-width: 320px; margin: 12px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; }
         .btn-primary { background: #2ecc71; color: #000; }
-        .btn-back { background: none; color: #fff; text-align: left; padding: 20px; width: auto; margin: 0; }
-        
-        /* Видео */
-        .v-container { width: 85%; max-width: 350px; aspect-ratio: 3/4; border: 2px solid #2ecc71; border-radius: 20px; overflow: hidden; margin: auto; position: relative; }
+        .btn-dark { background: #111; color: #fff; border: 1px solid #333; }
+        .btn:disabled { opacity: 0.1; cursor: not-allowed; }
+
+        /* Камера */
+        .video-box { position: relative; width: 90%; max-width: 400px; aspect-ratio: 3/4; border: 3px solid #2ecc71; border-radius: 25px; overflow: hidden; margin-bottom: 20px; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 40px solid rgba(0,0,0,0.3); box-sizing: border-box; }
         
-        /* Таблица админки */
-        .admin-wrap { flex: 1; overflow-y: auto; padding: 20px; }
-        .form { background: #111; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #222; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px; }
+        /* Уведомление о входе */
+        #access-msg { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 10px 20px; border-radius: 10px; font-weight: bold; display: none; z-index: 10; white-space: nowrap; }
+
+        /* Админка */
+        .admin-panel { width: 100%; height: 100%; padding: 20px; overflow-y: auto; display: block; }
+        .form-group { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; margin-bottom: 15px; }
         
-        table { width: 100%; border-collapse: collapse; background: #0a0a0a; border-radius: 10px; overflow: hidden; }
-        th { background: #1a1a1a; color: #2ecc71; text-align: left; padding: 12px; font-size: 12px; text-transform: uppercase; }
-        td { padding: 12px; border-bottom: 1px solid #111; font-size: 14px; }
-        .row-pic { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; display: block; }
+        .user-list { width: 100%; }
+        .user-item { display: flex; align-items: center; background: #0a0a0a; padding: 12px; border-radius: 12px; margin-bottom: 8px; border-left: 4px solid #2ecc71; }
+        .user-item img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-right: 15px; }
     </style>
 </head>
 <body>
 
-    <!-- Меню -->
+    <!-- ЭКРАН 1: ГЛАВНЫЙ (ЛОНЧЕР) -->
     <div id="launcher" class="screen active">
-        <div style="margin: auto; text-align: center; width: 100%;">
-            <h1 style="letter-spacing: 3px;">BIOID <span style="color:#2ecc71">SYSTEM</span></h1>
-            <p id="msg" style="color: #444; margin: 20px 0; font-size: 12px;">ЗАГРУЗКА ИИ...</p>
-            <button id="b1" class="btn btn-primary" onclick="ui.show('terminal')" disabled>ВОЙТИ (СКАНЕР)</button>
-            <button id="b2" class="btn" style="background:#1a1a1a; color:#fff" onclick="ui.show('admin')" disabled>АДМИН-ПАНЕЛЬ</button>
-        </div>
+        <h1 style="letter-spacing: 5px; margin-bottom: 10px;">BIOID</h1>
+        <p id="loader-info" style="color: #2ecc71; margin-bottom: 40px; font-size: 14px;">ЗАГРУЗКА БАЗЫ...</p>
+        
+        <button id="btn-scan" class="btn btn-primary" onclick="ui.show('terminal')" disabled>ВХОД</button>
+        <button id="btn-admin" class="btn btn-dark" onclick="ui.show('admin')" disabled>БАЗА</button>
     </div>
 
-    <!-- Сканер -->
+    <!-- ЭКРАН 2: ТЕРМИНАЛ (КАМЕРА) -->
     <div id="terminal" class="screen">
-        <button class="btn btn-back" onclick="ui.show('launcher')">← НАЗАД</button>
-        <div class="v-container"><video id="video" autoplay playsinline muted></video></div>
-        <div id="st" style="text-align:center; color:#2ecc71; padding:20px; font-family: monospace;">СКАНЕР АКТИВЕН</div>
+        <div style="position: absolute; top: 20px; left: 20px; font-size: 20px;" onclick="ui.show('launcher')">✕</div>
+        
+        <div class="video-box">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="overlay"></div>
+            <div id="access-msg">ДОСТУП РАЗРЕШЕН</div>
+        </div>
+        
+        <div id="scan-status" style="color: #2ecc71; font-family: monospace;">СКАНЕР: ПОИСК ЛИЦА...</div>
     </div>
 
-    <!-- Админка -->
-    <div id="admin" class="screen">
-        <button class="btn btn-back" onclick="ui.show('launcher')">← НАЗАД</button>
-        <div class="admin-wrap">
-            <div class="form">
-                <input type="text" id="in-name" placeholder="ФИО сотрудника">
-                <input type="file" id="in-file" accept="image/*">
-                <button id="reg-btn" class="btn btn-primary" style="width:100%; margin: 10px 0 0;" onclick="engine.reg()">ДОБАВИТЬ В БАЗУ</button>
+    <!-- ЭКРАН 3: АДМИНКА -->
+    <div id="admin" class="screen" style="justify-content: flex-start; align-items: stretch;">
+        <div style="padding: 20px; border-bottom: 1px solid #222;" onclick="ui.show('launcher')">← НАЗАД</div>
+        
+        <div class="admin-panel">
+            <div class="form-group">
+                <input type="text" id="reg-name" placeholder="ИМЯ СОТРУДНИКА">
+                <input type="file" id="reg-file" accept="image/*" style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                <button id="reg-btn" class="btn btn-primary" style="width: 100%; margin: 0;" onclick="engine.register()">СОХРАНИТЬ В БАЗУ</button>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Фото</th>
-                        <th>Имя</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <!-- Сюда попадут данные -->
-                </tbody>
-            </table>
+            <div id="list-container" class="user-list">
+                <!-- Сюда добавятся люди -->
+            </div>
         </div>
     </div>
 
 <script>
-// Чистим кэш старых скриптов
-if('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-}
-
+// 1. БАЗА ДАННЫХ (Улучшенная версия для GitHub)
 const db = {
     async init() {
         return new Promise(res => {
-            // Повышаем версию базы, чтобы сбросить ошибки
-            const req = indexedDB.open('BioDatabase_V5', 5);
+            const req = indexedDB.open('BioID_Final_DB', 1);
             req.onupgradeneeded = e => {
                 const d = e.target.result;
-                if(!d.objectStoreNames.contains('users')) d.createObjectStore('users', {keyPath:'name'});
+                if(!d.objectStoreNames.contains('users')) d.createObjectStore('users', {keyPath: 'name'});
             };
-            req.onsuccess = e => { this.i = e.target.result; res(); };
+            req.onsuccess = e => { this.instance = e.target.result; res(); };
         });
     },
-    async add(u) {
-        const t = this.i.transaction('users','readwrite');
-        return new Promise(res => {
-            t.objectStore('users').put(u).onsuccess = () => res();
-        });
+    async save(user) {
+        const tx = this.instance.transaction('users', 'readwrite');
+        await tx.objectStore('users').put(user);
     },
-    async get() {
+    async getAll() {
         return new Promise(res => {
-            this.i.transaction('users').objectStore('users').getAll().onsuccess = e => res(e.target.result || []);
+            this.instance.transaction('users').objectStore('users').getAll().onsuccess = e => res(e.target.result || []);
         });
     }
 };
 
+// 2. ДВИЖОК ИИ
 const engine = {
     async init() {
         try {
-            const url = './models';
+            const URL = './models'; // Папка с моделями в корне GitHub
             await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(url),
-                faceapi.nets.faceLandmark68Net.loadFromUri(url),
-                faceapi.nets.faceRecognitionNet.loadFromUri(url)
+                faceapi.nets.tinyFaceDetector.loadFromUri(URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(URL)
             ]);
-            document.getElementById('msg').textContent = "СИСТЕМА ГОТОВА";
-            document.getElementById('b1').disabled = document.getElementById('b2').disabled = false;
-        } catch(e) { document.getElementById('msg').textContent = "ОШИБКА ФАЙЛОВ МОДЕЛЕЙ"; }
+            document.getElementById('loader-info').textContent = "СИСТЕМА ГОТОВА";
+            document.getElementById('btn-scan').disabled = false;
+            document.getElementById('btn-admin').disabled = false;
+        } catch (e) {
+            document.getElementById('loader-info').textContent = "ОШИБКА ФАЙЛОВ";
+            document.getElementById('loader-info').style.color = "red";
+        }
     },
-    async reg() {
-        const name = document.getElementById('in-name').value;
-        const file = document.getElementById('in-file').files[0];
-        if(!name || !file) return alert("Введите имя и выберите фото");
-        
-        const btn = document.getElementById('reg-btn');
-        btn.disabled = true; btn.textContent = "АНАЛИЗ ЛИЦА...";
 
-        try {
-            const img = await faceapi.bufferToImage(file);
-            const res = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-            
-            if(res) {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = async () => {
-                    await db.add({name, desc: Array.from(res.descriptor), pic: reader.result});
-                    alert("СОТРУДНИК ДОБАВЛЕН");
-                    document.getElementById('in-name').value = "";
-                    ui.render();
-                    btn.disabled = false; btn.textContent = "ДОБАВИТЬ В БАЗУ";
-                };
-            } else {
-                alert("ЛИЦО НЕ НАЙДЕНО");
-                btn.disabled = false; btn.textContent = "ДОБАВИТЬ В БАЗУ";
-            }
-        } catch(e) { alert("ОШИБКА ИИ"); btn.disabled = false; }
+    async register() {
+        const name = document.getElementById('reg-name').value;
+        const file = document.getElementById('reg-file').files[0];
+        if(!name || !file) return alert("Заполните данные!");
+
+        const btn = document.getElementById('reg-btn');
+        btn.disabled = true; btn.textContent = "АНАЛИЗ...";
+
+        const img = await faceapi.bufferToImage(file);
+        const res = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+
+        if(res) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                await db.save({ name, descriptor: Array.from(res.descriptor), photo: reader.result });
+                alert("СОХРАНЕНО!");
+                document.getElementById('reg-name').value = "";
+                ui.renderList();
+                btn.disabled = false; btn.textContent = "СОХРАНИТЬ В БАЗУ";
+            };
+        } else {
+            alert("ЛИЦО НЕ НАЙДЕНО!");
+            btn.disabled = false; btn.textContent = "СОХРАНИТЬ В БАЗУ";
+        }
     },
+
     async scan() {
-        if(ui.cur !== 'terminal') return;
-        const v = document.getElementById('video'), users = await db.get();
-        if(users.length && v.readyState === 4) {
-            const res = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        if(ui.current !== 'terminal') return;
+        const video = document.getElementById('video');
+        const users = await db.getAll();
+
+        if(users.length && video.readyState === 4) {
+            const res = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if(res) {
                 for(let u of users) {
-                    const d = faceapi.euclideanDistance(res.desc, new Float32Array(u.desc));
-                    if(d < 0.55) { 
-                        document.getElementById('st').innerHTML = "ДОСТУП: <b style='color:#fff'>" + u.name + "</b>";
-                        return setTimeout(() => {
-                            document.getElementById('st').textContent = "ПОИСК...";
-                            this.scan();
-                        }, 3000);
+                    const dist = faceapi.euclideanDistance(res.descriptor, new Float32Array(u.descriptor));
+                    if(dist < 0.55) {
+                        ui.showAccess(u.name);
+                        return; // Останавливаем цикл, если нашли
                     }
                 }
             }
         }
-        setTimeout(() => this.scan(), 500);
+        setTimeout(() => this.scan(), 400);
     }
 };
 
+// 3. ИНТЕРФЕЙС
 const ui = {
-    cur: 'launcher',
+    current: 'launcher',
     show(id) {
-        this.cur = id;
+        this.current = id;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+        
         if(id === 'terminal') {
-            navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}).then(s => {
-                document.getElementById('video').srcObject = s;
-                engine.scan();
-            });
-        } else if(id === 'admin') this.render();
-    },
-    async render() {
-        const users = await db.get();
-        const tbody = document.getElementById('table-body');
-        if(!users.length) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#444">База пуста</td></tr>';
-            return;
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(stream => {
+                    document.getElementById('video').srcObject = stream;
+                    engine.scan();
+                });
+        } else if(id === 'admin') {
+            this.renderList();
         }
-        tbody.innerHTML = users.map(u => `
-            <tr>
-                <td><img src="${u.pic}" class="row-pic"></td>
-                <td><b>${u.name}</b></td>
-                <td style="color:#2ecc71">Active</td>
-            </tr>
+    },
+    async renderList() {
+        const users = await db.getAll();
+        document.getElementById('list-container').innerHTML = users.map(u => `
+            <div class="user-item">
+                <img src="${u.photo}">
+                <div>
+                    <div style="font-weight:bold; font-size:14px;">${u.name}</div>
+                    <div style="font-size:10px; color:#2ecc71;">БИОМЕТРИЯ АКТИВНА</div>
+                </div>
+            </div>
         `).join('');
+    },
+    showAccess(name) {
+        const msg = document.getElementById('access-msg');
+        const status = document.getElementById('scan-status');
+        msg.textContent = "ВХОД: " + name;
+        msg.style.display = "block";
+        status.textContent = "ЛИЦО РАСПОЗНАНО";
+        
+        setTimeout(() => {
+            msg.style.display = "none";
+            status.textContent = "СКАНЕР: ПОИСК ЛИЦА...";
+            engine.scan(); // Снова запускаем поиск через 3 секунды
+        }, 3000);
     }
 };
 
-window.onload = async () => { 
-    await db.init(); 
-    engine.init(); 
-};
+window.onload = () => { db.init(); engine.init(); };
 </script>
 </body>
 </html>
