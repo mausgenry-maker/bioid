@@ -2,218 +2,267 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>BioID Elite v4.1 - AI System</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <title>BioID Original Style</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
-        
-        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; align-items: center; justify-content: center; background: #000; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; }
+        .screen { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; flex-direction: column; }
         .screen.active { display: flex; }
+        .btn-back { position: absolute; top: 20px; left: 20px; padding: 10px 15px; background: #333; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 10; }
 
-        /* Стиль кнопок как в начале */
-        .btn { padding: 20px; border: none; border-radius: 15px; font-weight: bold; width: 85%; max-width: 320px; margin: 12px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; }
+        /* LAUNCHER */
+        #launcher { justify-content: center; align-items: center; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); }
+        .launcher-container { text-align: center; }
+        .launcher-container h1 { font-size: 56px; color: #2ecc71; margin-bottom: 10px; }
+        .button-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 250px; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .btn-primary { background: #2ecc71; color: #000; }
-        .btn-dark { background: #111; color: #fff; border: 1px solid #333; }
-        .btn:disabled { opacity: 0.1; cursor: not-allowed; }
+        .btn-secondary { background: #3498db; color: #fff; }
 
-        /* Камера */
-        .video-box { position: relative; width: 90%; max-width: 400px; aspect-ratio: 3/4; border: 3px solid #2ecc71; border-radius: 25px; overflow: hidden; margin-bottom: 20px; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 40px solid rgba(0,0,0,0.3); box-sizing: border-box; }
-        
-        /* Уведомление о входе */
-        #access-msg { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: #000; padding: 10px 20px; border-radius: 10px; font-weight: bold; display: none; z-index: 10; white-space: nowrap; }
+        /* TERMINAL */
+        .terminal-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        video { max-width: 90%; max-height: 400px; border: 3px solid #2ecc71; border-radius: 20px; transform: scaleX(-1); object-fit: cover; }
+        #status { margin-top: 20px; padding: 10px; color: #2ecc71; font-weight: bold; font-family: monospace; }
 
-        /* Админка */
-        .admin-panel { width: 100%; height: 100%; padding: 20px; overflow-y: auto; display: block; }
-        .form-group { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; margin-bottom: 15px; }
+        /* ADMIN */
+        .admin-layout { flex: 1; display: grid; grid-template-columns: 1fr 320px; gap: 15px; padding: 60px 15px 15px 15px; overflow: hidden; }
+        .admin-left { overflow: auto; background: #111; padding: 10px; border-radius: 8px; }
+        .admin-right { overflow-y: auto; background: #111; padding: 15px; border-radius: 8px; border-left: 2px solid #333; }
         
-        .user-list { width: 100%; }
-        .user-item { display: flex; align-items: center; background: #0a0a0a; padding: 12px; border-radius: 12px; margin-bottom: 8px; border-left: 4px solid #2ecc71; }
-        .user-item img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-right: 15px; }
+        .calendar-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 700px; }
+        .calendar-table th, .calendar-table td { border: 1px solid #222; padding: 8px; text-align: center; }
+        .calendar-table th { background: #2ecc71; color: #000; }
+        .calendar-table td { cursor: pointer; transition: 0.2s; }
+        .calendar-table td.present { background: #2ecc71 !important; color: #000; font-weight: bold; }
+        .calendar-table td.absent { background: #e74c3c !important; color: #fff; }
+
+        .worker-item { background: #1a1a1a; padding: 8px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; }
+        .worker-info { display: flex; align-items: center; gap: 8px; }
+        .worker-info img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #333; }
+        .btn-del { background: #c0392b; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
+
+        .tabs-header { display: flex; gap: 4px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { padding: 6px 10px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; }
+        .tab-btn.active { background: #3498db; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: #111; border: 2px solid #2ecc71; padding: 25px; border-radius: 12px; text-align: center; width: 300px; }
     </style>
 </head>
 <body>
 
-    <!-- ЭКРАН 1: ГЛАВНЫЙ (ЛОНЧЕР) -->
+    <!-- Launcher -->
     <div id="launcher" class="screen active">
-        <h1 style="letter-spacing: 5px; margin-bottom: 10px;">BIOID</h1>
-        <p id="loader-info" style="color: #2ecc71; margin-bottom: 40px; font-size: 14px;">ЗАГРУЗКА БАЗЫ...</p>
-        
-        <button id="btn-scan" class="btn btn-primary" onclick="ui.show('terminal')" disabled>ВХОД</button>
-        <button id="btn-admin" class="btn btn-dark" onclick="ui.show('admin')" disabled>БАЗА</button>
+        <div class="launcher-container">
+            <h1>BioID <span style="color:#fff">Elite</span></h1>
+            <p id="ai-status" style="color:#666; margin-bottom:30px">ЗАГРУЗКА ИИ...</p>
+            <div class="button-group">
+                <button id="btn-term" class="btn btn-primary" onclick="app.goToUserTerminal()" disabled>📷 ТЕРМИНАЛ</button>
+                <button id="btn-admin" class="btn btn-secondary" onclick="app.goToAdmin()" disabled>⚙️ АДМИНКА</button>
+            </div>
+        </div>
     </div>
 
-    <!-- ЭКРАН 2: ТЕРМИНАЛ (КАМЕРА) -->
-    <div id="terminal" class="screen">
-        <div style="position: absolute; top: 20px; left: 20px; font-size: 20px;" onclick="ui.show('launcher')">✕</div>
-        
-        <div class="video-box">
+    <!-- Terminal -->
+    <div id="user-terminal" class="screen">
+        <button class="btn-back" onclick="app.goToLauncher()">← НАЗАД</button>
+        <div class="terminal-container">
             <video id="video" autoplay playsinline muted></video>
-            <div class="overlay"></div>
-            <div id="access-msg">ДОСТУП РАЗРЕШЕН</div>
-        </div>
-        
-        <div id="scan-status" style="color: #2ecc71; font-family: monospace;">СКАНЕР: ПОИСК ЛИЦА...</div>
-    </div>
-
-    <!-- ЭКРАН 3: АДМИНКА -->
-    <div id="admin" class="screen" style="justify-content: flex-start; align-items: stretch;">
-        <div style="padding: 20px; border-bottom: 1px solid #222;" onclick="ui.show('launcher')">← НАЗАД</div>
-        
-        <div class="admin-panel">
-            <div class="form-group">
-                <input type="text" id="reg-name" placeholder="ИМЯ СОТРУДНИКА">
-                <input type="file" id="reg-file" accept="image/*" style="font-size: 12px; color: #666; margin-bottom: 15px;">
-                <button id="reg-btn" class="btn btn-primary" style="width: 100%; margin: 0;" onclick="engine.register()">СОХРАНИТЬ В БАЗУ</button>
-            </div>
-
-            <div id="list-container" class="user-list">
-                <!-- Сюда добавятся люди -->
-            </div>
+            <div id="status">Ready</div>
         </div>
     </div>
 
-<script>
-// 1. БАЗА ДАННЫХ (Улучшенная версия для GitHub)
-const db = {
-    async init() {
-        return new Promise(res => {
-            const req = indexedDB.open('BioID_Final_DB', 1);
-            req.onupgradeneeded = e => {
-                const d = e.target.result;
-                if(!d.objectStoreNames.contains('users')) d.createObjectStore('users', {keyPath: 'name'});
-            };
-            req.onsuccess = e => { this.instance = e.target.result; res(); };
-        });
-    },
-    async save(user) {
-        const tx = this.instance.transaction('users', 'readwrite');
-        await tx.objectStore('users').put(user);
-    },
-    async getAll() {
-        return new Promise(res => {
-            this.instance.transaction('users').objectStore('users').getAll().onsuccess = e => res(e.target.result || []);
-        });
-    }
-};
+    <!-- Admin -->
+    <div id="admin-dashboard" class="screen">
+        <button class="btn-back" onclick="app.goToLauncher()">← НАЗАД</button>
+        <div class="admin-layout">
+            <div class="admin-left">
+                <div class="tabs-header" id="month-tabs"></div>
+                <div id="calendar-container"></div>
+            </div>
+            <div class="admin-right">
+                <h4 style="color:#2ecc71; margin-bottom:10px">Новый сотрудник</h4>
+                <input type="text" id="new-name" placeholder="Имя" style="width:100%; padding:10px; margin-bottom:10px; background:#222; color:#fff; border:1px solid #444; border-radius:5px;">
+                <input type="file" id="new-photo" accept="image/*" style="margin-bottom:15px; font-size:10px; color:#666;">
+                <button id="add-btn" class="btn btn-primary" style="width:100%; font-size:12px" onclick="admin.addWorker()">ДОБАВИТЬ</button>
+                
+                <h4 style="color:#3498db; margin:20px 0 10px 0">База данных</h4>
+                <div id="workers-list"></div>
+            </div>
+        </div>
+    </div>
 
-// 2. ДВИЖОК ИИ
-const engine = {
-    async init() {
-        try {
-            const URL = './models'; // Папка с моделями в корне GitHub
-            await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(URL)
-            ]);
-            document.getElementById('loader-info').textContent = "СИСТЕМА ГОТОВА";
-            document.getElementById('btn-scan').disabled = false;
-            document.getElementById('btn-admin').disabled = false;
-        } catch (e) {
-            document.getElementById('loader-info').textContent = "ОШИБКА ФАЙЛОВ";
-            document.getElementById('loader-info').style.color = "red";
-        }
-    },
+    <!-- Day Control Modal -->
+    <div id="day-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="day-modal-title" style="margin-bottom:15px">Правка дня</h3>
+            <div style="display:flex; flex-direction:column; gap:10px">
+                <button class="btn btn-primary" onclick="admin.updateDayStatus('IN')">Присутствовал (Зел)</button>
+                <button class="btn" style="background:#e74c3c; color:white" onclick="admin.updateDayStatus('ABSENT')">Отсутствовал (Крас)</button>
+                <button class="btn" style="background:#444; color:white" onclick="admin.updateDayStatus('CLEAR')">Очистить</button>
+                <button class="btn" style="background:transparent; color:#999" onclick="admin.closeDayModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
 
-    async register() {
-        const name = document.getElementById('reg-name').value;
-        const file = document.getElementById('reg-file').files[0];
-        if(!name || !file) return alert("Заполните данные!");
-
-        const btn = document.getElementById('reg-btn');
-        btn.disabled = true; btn.textContent = "АНАЛИЗ...";
-
-        const img = await faceapi.bufferToImage(file);
-        const res = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-
-        if(res) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                await db.save({ name, descriptor: Array.from(res.descriptor), photo: reader.result });
-                alert("СОХРАНЕНО!");
-                document.getElementById('reg-name').value = "";
-                ui.renderList();
-                btn.disabled = false; btn.textContent = "СОХРАНИТЬ В БАЗУ";
-            };
-        } else {
-            alert("ЛИЦО НЕ НАЙДЕНО!");
-            btn.disabled = false; btn.textContent = "СОХРАНИТЬ В БАЗУ";
-        }
-    },
-
-    async scan() {
-        if(ui.current !== 'terminal') return;
-        const video = document.getElementById('video');
-        const users = await db.getAll();
-
-        if(users.length && video.readyState === 4) {
-            const res = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-            if(res) {
-                for(let u of users) {
-                    const dist = faceapi.euclideanDistance(res.descriptor, new Float32Array(u.descriptor));
-                    if(dist < 0.55) {
-                        ui.showAccess(u.name);
-                        return; // Останавливаем цикл, если нашли
-                    }
-                }
+    <script>
+        // --- STORAGE (С автоматическим созданием логов при входе) ---
+        class Storage {
+            constructor() { this.db = null; }
+            async init() {
+                return new Promise((r) => {
+                    const req = indexedDB.open('BioID_v42_Core', 3);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if(!db.objectStoreNames.contains('workers')) db.createObjectStore('workers', { keyPath: 'name' });
+                        if(!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+                    };
+                    req.onsuccess = (e) => { this.db = e.target.result; r(); };
+                });
+            }
+            async getWorkers() { return new Promise(r => this.db.transaction('workers').objectStore('workers').getAll().onsuccess = e => r(e.target.result)); }
+            async addWorker(w) { await this.db.transaction('workers','readwrite').objectStore('workers').put(w); }
+            async deleteWorker(name) { await this.db.transaction('workers','readwrite').objectStore('workers').delete(name); }
+            async getLogs() { return new Promise(r => this.db.transaction('logs').objectStore('logs').getAll().onsuccess = e => r(e.target.result)); }
+            async addLog(l) { await this.db.transaction('logs','readwrite').objectStore('logs').add(l); }
+            async clearDayLogs(workerName, date) {
+                const tx = this.db.transaction('logs', 'readwrite');
+                const store = tx.objectStore('logs');
+                store.getAll().onsuccess = (e) => {
+                    const logs = e.target.result;
+                    logs.forEach(l => { if(l.workerName === workerName && l.date === date) store.delete(l.id); });
+                };
             }
         }
-        setTimeout(() => this.scan(), 400);
-    }
-};
+        const storage = new Storage();
 
-// 3. ИНТЕРФЕЙС
-const ui = {
-    current: 'launcher',
-    show(id) {
-        this.current = id;
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        
-        if(id === 'terminal') {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-                .then(stream => {
-                    document.getElementById('video').srcObject = stream;
-                    engine.scan();
+        // --- ADMIN & CALENDAR ---
+        class Admin {
+            constructor() { this.month = new Date().getMonth(); this.year = new Date().getFullYear(); this.selectedCell = null; }
+            async init() { this.renderTabs(); await this.renderCalendar(); await this.renderWorkers(); }
+            renderTabs() {
+                const months = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+                document.getElementById('month-tabs').innerHTML = months.map((m, i) => `<button class="tab-btn ${i===this.month?'active':''}" onclick="admin.setMonth(${i})">${m}</button>`).join('');
+            }
+            async setMonth(m) { this.month = m; this.renderTabs(); await this.renderCalendar(); }
+            async renderCalendar() {
+                const workers = await storage.getWorkers();
+                const logs = await storage.getLogs();
+                const days = new Date(this.year, this.month + 1, 0).getDate();
+                let html = `<table class="calendar-table"><thead><tr><th>Сотрудник</th>`;
+                for(let d=1; d<=days; d++) html += `<th>${d}</th>`;
+                html += `</tr></thead><tbody>`;
+                workers.forEach(w => {
+                    html += `<tr><td style="text-align:left; font-weight:bold; color:#2ecc71;">${w.name}</td>`;
+                    for(let d=1; d<=days; d++) {
+                        const dStr = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        const dayLogs = logs.filter(l => l.workerName === w.name && l.date === dStr);
+                        const status = dayLogs.length > 0 ? dayLogs[dayLogs.length-1].action : '';
+                        const cls = status === 'IN' ? 'present' : (status === 'ABSENT' ? 'absent' : '');
+                        html += `<td class="${cls}" onclick="admin.openDayModal('${w.name}', '${dStr}')">${status === 'IN' ? '✓' : (status === 'ABSENT' ? '✗' : '')}</td>`;
+                    }
+                    html += `</tr>`;
                 });
-        } else if(id === 'admin') {
-            this.renderList();
+                document.getElementById('calendar-container').innerHTML = html + `</tbody></table>`;
+            }
+            openDayModal(workerName, date) { this.selectedCell = { workerName, date }; document.getElementById('day-modal-title').textContent = `${workerName} (${date})`; document.getElementById('day-modal').classList.add('active'); }
+            async updateDayStatus(status) {
+                const { workerName, date } = this.selectedCell;
+                await storage.clearDayLogs(workerName, date);
+                if(status !== 'CLEAR') await storage.addLog({ workerName, date, action: status, time: 'Manual' });
+                this.closeDayModal(); await this.renderCalendar();
+            }
+            closeDayModal() { document.getElementById('day-modal').classList.remove('active'); }
+            async addWorker() {
+                const name = document.getElementById('new-name').value;
+                const file = document.getElementById('new-photo').files[0];
+                const btn = document.getElementById('add-btn');
+                if(!name || !file) return alert("Введите имя и фото");
+                btn.disabled = true; btn.textContent = "АНАЛИЗ...";
+                const img = await faceapi.bufferToImage(file);
+                const res = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                if(res) {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = async () => {
+                        await storage.addWorker({ name, descriptor: Array.from(res.descriptor), photo: reader.result });
+                        alert("Сотрудник добавлен!");
+                        document.getElementById('new-name').value = "";
+                        await this.init(); btn.disabled = false; btn.textContent = "ДОБАВИТЬ";
+                    };
+                } else { alert("Лицо не найдено"); btn.disabled = false; btn.textContent = "ДОБАВИТЬ"; }
+            }
+            async deleteWorker(name) { if(confirm(`Удалить ${name}?`)) { await storage.deleteWorker(name); await this.init(); } }
+            async renderWorkers() {
+                const workers = await storage.getWorkers();
+                document.getElementById('workers-list').innerHTML = workers.map(w => `
+                    <div class="worker-item">
+                        <div class="worker-info"><img src="${w.photo}"><span>${w.name}</span></div>
+                        <button class="btn-del" onclick="admin.deleteWorker('${w.name}')">УДАЛИТЬ</button>
+                    </div>
+                `).join('');
+            }
         }
-    },
-    async renderList() {
-        const users = await db.getAll();
-        document.getElementById('list-container').innerHTML = users.map(u => `
-            <div class="user-item">
-                <img src="${u.photo}">
-                <div>
-                    <div style="font-weight:bold; font-size:14px;">${u.name}</div>
-                    <div style="font-size:10px; color:#2ecc71;">БИОМЕТРИЯ АКТИВНА</div>
-                </div>
-            </div>
-        `).join('');
-    },
-    showAccess(name) {
-        const msg = document.getElementById('access-msg');
-        const status = document.getElementById('scan-status');
-        msg.textContent = "ВХОД: " + name;
-        msg.style.display = "block";
-        status.textContent = "ЛИЦО РАСПОЗНАНО";
-        
-        setTimeout(() => {
-            msg.style.display = "none";
-            status.textContent = "СКАНЕР: ПОИСК ЛИЦА...";
-            engine.scan(); // Снова запускаем поиск через 3 секунды
-        }, 3000);
-    }
-};
+        const admin = new Admin();
 
-window.onload = () => { db.init(); engine.init(); };
-</script>
+        // --- APP & AI ENGINE ---
+        const app = {
+            isRunning: false,
+            async initAI() {
+                try {
+                    const url = './models';
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(url),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(url),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(url)
+                    ]);
+                    document.getElementById('ai-status').textContent = "v4.2 СИСТЕМА АКТИВНА";
+                    document.getElementById('btn-term').disabled = false;
+                    document.getElementById('btn-admin').disabled = false;
+                } catch(e) { document.getElementById('ai-status').textContent = "ОШИБКА МОДЕЛЕЙ"; }
+            },
+            async goToUserTerminal() {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('user-terminal').classList.add('active');
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                document.getElementById('video').srcObject = s;
+                this.isRunning = true; this.detect();
+            },
+            async detect() {
+                if(!this.isRunning) return;
+                const v = document.getElementById('video');
+                const workers = await storage.getWorkers();
+                if(workers.length && v.readyState === 4) {
+                    const res = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                    if(res) {
+                        for(let w of workers) {
+                            const d = faceapi.euclideanDistance(res.descriptor, new Float32Array(w.descriptor));
+                            if(d < 0.55) {
+                                const today = new Date().toISOString().split('T')[0];
+                                await storage.clearDayLogs(w.name, today);
+                                await storage.addLog({ workerName: w.name, date: today, action: 'IN', time: new Date().toLocaleTimeString() });
+                                document.getElementById('status').innerHTML = `<span style="color:#2ecc71">ВХОД: ${w.name}</span>`;
+                                return setTimeout(() => { document.getElementById('status').textContent = "Ready"; this.detect(); }, 3000);
+                            }
+                        }
+                    }
+                }
+                setTimeout(() => this.detect(), 500);
+            },
+            async goToAdmin() {
+                this.isRunning = false;
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('admin-dashboard').classList.add('active');
+                await admin.init();
+            },
+            goToLauncher() { location.reload(); }
+        };
+
+        window.onload = async () => { await storage.init(); app.initAI(); };
+    </script>
 </body>
 </html>
