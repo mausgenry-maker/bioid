@@ -1,268 +1,66 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>BioID Elite v4.1 - AI System</title>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; }
-        .screen { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; flex-direction: column; }
-        .screen.active { display: flex; }
-        .btn-back { position: absolute; top: 20px; left: 20px; padding: 10px 15px; background: #333; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 10; }
+print(f'\n--- [STEP {i}] SOVEREIGN HEALTH REPORT ---')
+            for name, param in gpt.named_parameters():
+                if param.requires_grad:
+                    has_grad = param.grad is not None
+                    if not has_grad:
+                        print(f"!!! CRITICAL: NO GRADIENTS in {name}")
+                    else:
+                        grad_norm = param.grad.norm().item()
+                        if grad_norm == 0:
+                            print(f"WARN: Zero gradient in {name}")
 
-        /* LAUNCHER */
-        #launcher { justify-content: center; align-items: center; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); }
-        .launcher-container { text-align: center; }
-        .launcher-container h1 { font-size: 56px; color: #2ecc71; margin-bottom: 10px; }
-        .button-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
-        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; width: 250px; }
-        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .btn-primary { background: #2ecc71; color: #000; }
-        .btn-secondary { background: #3498db; color: #fff; }
+                # first i check experts and kick
+                if 'routes' in name:
+                    # `routes` are already probabilities when training=True
+                    all_router_probs = torch.cat([r.reshape(-1, experts) for r in routes if r is not None], dim=0)
+                    all_router_probs = all_router_probs / (all_router_probs.sum(dim=-1, keepdim=True) + 1e-9)
+                    avg_usage = all_router_probs.mean(dim=0)
+                    # check weirdness as in generate
+                    entropy = -torch.sum(avg_usage * torch.log(avg_usage + 1e-10)).item()
+                    writer.add_scalar('Metrics/Expert_Entropy', entropy, i)
+                    all_params = dict(gpt.named_parameters())
+                    for idx, usage in enumerate(avg_usage):
+                        if usage < (1.0 / experts) * 0.1:
+                            status = "IDLE (STARVING)"
+                            if f'experts.{idx}.' in name:
+                                # adding noise to move it
+                                param.add_(torch.randn_like(param) * 0.001)
+                        
+                        elif usage > (1.0 / experts) * 1.5:
+                            # doing nothing as it will correct on its own
+                            status = 'OVERLOADED'
+                        else:
+                            status = "ACTIVE"
+                        print(f"Expert {idx}: [{status}] | Load: {usage:.2%} ")
+                        writer.add_scalar(f'Expert_Usage/Expert_{idx}', usage, i)
 
-        /* TERMINAL */
-        .terminal-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        video { max-width: 90%; max-height: 400px; border: 3px solid #2ecc71; border-radius: 20px; transform: scaleX(-1); object-fit: cover; }
-        #status { margin-top: 20px; padding: 10px; color: #2ecc71; font-weight: bold; font-family: monospace; }
-
-        /* ADMIN */
-        .admin-layout { flex: 1; display: grid; grid-template-columns: 1fr 320px; gap: 15px; padding: 60px 15px 15px 15px; overflow: hidden; }
-        .admin-left { overflow: auto; background: #111; padding: 10px; border-radius: 8px; }
-        .admin-right { overflow-y: auto; background: #111; padding: 15px; border-radius: 8px; border-left: 2px solid #333; }
-        
-        .calendar-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 700px; }
-        .calendar-table th, .calendar-table td { border: 1px solid #222; padding: 8px; text-align: center; }
-        .calendar-table th { background: #2ecc71; color: #000; }
-        .calendar-table td { cursor: pointer; transition: 0.2s; }
-        .calendar-table td.present { background: #2ecc71 !important; color: #000; font-weight: bold; }
-        .calendar-table td.absent { background: #e74c3c !important; color: #fff; }
-
-        .worker-item { background: #1a1a1a; padding: 8px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; }
-        .worker-info { display: flex; align-items: center; gap: 8px; }
-        .worker-info img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #333; }
-        .btn-del { background: #c0392b; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
-
-        .tabs-header { display: flex; gap: 4px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .tab-btn { padding: 6px 10px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 10px; }
-        .tab-btn.active { background: #3498db; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-        .modal.active { display: flex; }
-        .modal-content { background: #111; border: 2px solid #2ecc71; padding: 25px; border-radius: 12px; text-align: center; width: 300px; }
-    </style>
-</head>
-<body>
-
-    <!-- Launcher -->
-    <div id="launcher" class="screen active">
-        <div class="launcher-container">
-            <h1>BioID <span style="color:#fff">Elite</span></h1>
-            <p id="ai-status" style="color:#666; margin-bottom:30px">ЗАГРУЗКА ИИ...</p>
-            <div class="button-group">
-                <button id="btn-term" class="btn btn-primary" onclick="app.goToUserTerminal()" disabled>📷 ТЕРМИНАЛ</button>
-                <button id="btn-admin" class="btn btn-secondary" onclick="app.goToAdmin()" disabled>⚙️ АДМИНКА</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Terminal -->
-    <div id="user-terminal" class="screen">
-        <button class="btn-back" onclick="app.goToLauncher()">← НАЗАД</button>
-        <div class="terminal-container">
-            <video id="video" autoplay playsinline muted></video>
-            <div id="status">Ready</div>
-        </div>
-    </div>
-
-    <!-- Admin -->
-    <div id="admin-dashboard" class="screen">
-        <button class="btn-back" onclick="app.goToLauncher()">← НАЗАД</button>
-        <div class="admin-layout">
-            <div class="admin-left">
-                <div class="tabs-header" id="month-tabs"></div>
-                <div id="calendar-container"></div>
-            </div>
-            <div class="admin-right">
-                <h4 style="color:#2ecc71; margin-bottom:10px">Новый сотрудник</h4>
-                <input type="text" id="new-name" placeholder="Имя" style="width:100%; padding:10px; margin-bottom:10px; background:#222; color:#fff; border:1px solid #444; border-radius:5px;">
-                <input type="file" id="new-photo" accept="image/*" style="margin-bottom:15px; font-size:10px; color:#666;">
-                <button id="add-btn" class="btn btn-primary" style="width:100%; font-size:12px" onclick="admin.addWorker()">ДОБАВИТЬ</button>
-                
-                <h4 style="color:#3498db; margin:20px 0 10px 0">База данных</h4>
-                <div id="workers-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Day Control Modal -->
-    <div id="day-modal" class="modal">
-        <div class="modal-content">
-            <h3 id="day-modal-title" style="margin-bottom:15px">Правка дня</h3>
-            <div style="display:flex; flex-direction:column; gap:10px">
-                <button class="btn btn-primary" onclick="admin.updateDayStatus('IN')">Присутствовал (Зел)</button>
-                <button class="btn" style="background:#e74c3c; color:white" onclick="admin.updateDayStatus('ABSENT')">Отсутствовал (Крас)</button>
-                <button class="btn" style="background:#444; color:white" onclick="admin.updateDayStatus('CLEAR')">Очистить</button>
-                <button class="btn" style="background:transparent; color:#999" onclick="admin.closeDayModal()">Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- STORAGE (С автоматическим созданием логов при входе) ---
-        class Storage {
-            constructor() { this.db = null; }
-            async init() {
-                return new Promise((r) => {
-                    const req = indexedDB.open('BioID_v42_Core', 3);
-                    req.onupgradeneeded = (e) => {
-                        const db = e.target.result;
-                        if(!db.objectStoreNames.contains('workers')) db.createObjectStore('workers', { keyPath: 'name' });
-                        if(!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
-                    };
-                    req.onsuccess = (e) => { this.db = e.target.result; r(); };
-                });
-            }
-            async getWorkers() { return new Promise(r => this.db.transaction('workers').objectStore('workers').getAll().onsuccess = e => r(e.target.result)); }
-            async addWorker(w) { await this.db.transaction('workers','readwrite').objectStore('workers').put(w); }
-            async deleteWorker(name) { await this.db.transaction('workers','readwrite').objectStore('workers').delete(name); }
-            async getLogs() { return new Promise(r => this.db.transaction('logs').objectStore('logs').getAll().onsuccess = e => r(e.target.result)); }
-            async addLog(l) { await this.db.transaction('logs','readwrite').objectStore('logs').add(l); }
-            async clearDayLogs(workerName, date) {
-                const tx = this.db.transaction('logs', 'readwrite');
-                const store = tx.objectStore('logs');
-                store.getAll().onsuccess = (e) => {
-                    const logs = e.target.result;
-                    logs.forEach(l => { if(l.workerName === workerName && l.date === date) store.delete(l.id); });
-                };
-            }
-        }
-        const storage = new Storage();
-
-        // --- ADMIN & CALENDAR ---
-        class Admin {
-            constructor() { this.month = new Date().getMonth(); this.year = new Date().getFullYear(); this.selectedCell = null; }
-            async init() { this.renderTabs(); await this.renderCalendar(); await this.renderWorkers(); }
-            renderTabs() {
-                const months = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-                document.getElementById('month-tabs').innerHTML = months.map((m, i) => `<button class="tab-btn ${i===this.month?'active':''}" onclick="admin.setMonth(${i})">${m}</button>`).join('');
-            }
-            async setMonth(m) { this.month = m; this.renderTabs(); await this.renderCalendar(); }
-            async renderCalendar() {
-                const workers = await storage.getWorkers();
-                const logs = await storage.getLogs();
-                const days = new Date(this.year, this.month + 1, 0).getDate();
-                let html = `<table class="calendar-table"><thead><tr><th>Сотрудник</th>`;
-                for(let d=1; d<=days; d++) html += `<th>${d}</th>`;
-                html += `</tr></thead><tbody>`;
-                workers.forEach(w => {
-                    html += `<tr><td style="text-align:left; font-weight:bold; color:#2ecc71;">${w.name}</td>`;
-                    for(let d=1; d<=days; d++) {
-                        const dStr = `${this.year}-${String(this.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                        const dayLogs = logs.filter(l => l.workerName === w.name && l.date === dStr);
-                        const status = dayLogs.length > 0 ? dayLogs[dayLogs.length-1].action : '';
-                        const cls = status === 'IN' ? 'present' : (status === 'ABSENT' ? 'absent' : '');
-                        html += `<td class="${cls}" onclick="admin.openDayModal('${w.name}', '${dStr}')">${status === 'IN' ? '✓' : (status === 'ABSENT' ? '✗' : '')}</td>`;
-                    }
-                    html += `</tr>`;
-                });
-                document.getElementById('calendar-container').innerHTML = html + `</tbody></table>`;
-            }
-            openDayModal(workerName, date) { this.selectedCell = { workerName, date }; document.getElementById('day-modal-title').textContent = `${workerName} (${date})`; document.getElementById('day-modal').classList.add('active'); }
-            async updateDayStatus(status) {
-                const { workerName, date } = this.selectedCell;
-                await storage.clearDayLogs(workerName, date);
-                if(status !== 'CLEAR') await storage.addLog({ workerName, date, action: status, time: 'Manual' });
-                this.closeDayModal(); await this.renderCalendar();
-            }
-            closeDayModal() { document.getElementById('day-modal').classList.remove('active'); }
-            async addWorker() {
-                const name = document.getElementById('new-name').value;
-                const file = document.getElementById('new-photo').files[0];
-                const btn = document.getElementById('add-btn');
-                if(!name || !file) return alert("Введите имя и фото");
-                btn.disabled = true; btn.textContent = "АНАЛИЗ...";
-                const img = await faceapi.bufferToImage(file);
-                const res = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                if(res) {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = async () => {
-                        await storage.addWorker({ name, descriptor: Array.from(res.descriptor), photo: reader.result });
-                        alert("Сотрудник добавлен!");
-                        document.getElementById('new-name').value = "";
-                        await this.init(); btn.disabled = false; btn.textContent = "ДОБАВИТЬ";
-                    };
-                } else { alert("Лицо не найдено"); btn.disabled = false; btn.textContent = "ДОБАВИТЬ"; }
-            }
-            async deleteWorker(name) { if(confirm(`Удалить ${name}?`)) { await storage.deleteWorker(name); await this.init(); } }
-            async renderWorkers() {
-                const workers = await storage.getWorkers();
-                document.getElementById('workers-list').innerHTML = workers.map(w => `
-                    <div class="worker-item">
-                        <div class="worker-info"><img src="${w.photo}"><span>${w.name}</span></div>
-                        <button class="btn-del" onclick="admin.deleteWorker('${w.name}')">УДАЛИТЬ</button>
-                    </div>
-                `).join('');
-            }
-        }
-        const admin = new Admin();
-
-        // --- APP & AI ENGINE ---
-        const app = {
-            isRunning: false,
-            async initAI() {
-                try {
-                    const url = './models';
-                    await Promise.all([
-                        faceapi.nets.tinyFaceDetector.loadFromUri(url),
-                        faceapi.nets.faceLandmark68Net.loadFromUri(url),
-                        faceapi.nets.faceRecognitionNet.loadFromUri(url)
-                    ]);
-                    document.getElementById('ai-status').textContent = "v4.2 СИСТЕМА АКТИВНА";
-                    document.getElementById('btn-term').disabled = false;
-                    document.getElementById('btn-admin').disabled = false;
-                } catch(e) { document.getElementById('ai-status').textContent = "ОШИБКА МОДЕЛЕЙ"; }
-            },
-            async goToUserTerminal() {
-                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById('user-terminal').classList.add('active');
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                document.getElementById('video').srcObject = s;
-                this.isRunning = true; this.detect();
-            },
-            async detect() {
-                if(!this.isRunning) return;
-                const v = document.getElementById('video');
-                const workers = await storage.getWorkers();
-                if(workers.length && v.readyState === 4) {
-                    const res = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                    if(res) {
-                        for(let w of workers) {
-                            const d = faceapi.euclideanDistance(res.descriptor, new Float32Array(w.descriptor));
-                            if(d < 0.55) {
-                                const today = new Date().toISOString().split('T')[0];
-                                await storage.clearDayLogs(w.name, today);
-                                await storage.addLog({ workerName: w.name, date: today, action: 'IN', time: new Date().toLocaleTimeString() });
-                                document.getElementById('status').innerHTML = `<span style="color:#2ecc71">ВХОД: ${w.name}</span>`;
-                                return setTimeout(() => { document.getElementById('status').textContent = "Ready"; this.detect(); }, 3000);
-                            }
-                        }
-                    }
-                }
-                setTimeout(() => this.detect(), 500);
-            },
-            async goToAdmin() {
-                this.isRunning = false;
-                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById('admin-dashboard').classList.add('active');
-                await admin.init();
-            },
-            goToLauncher() { location.reload(); }
-        };
-
-        window.onload = async () => { await storage.init(); app.initAI(); };
-    </script>
-</body>
-</html>
+            # i check overall norm alog router after kicking
+            writer.add_histogram(f'Weights/{name}', param, i)
+            if 'router' in name:
+                gnorm = torch.norm(param.grad).item()
+                # checking router entropy
+                if gnorm > 10.0:
+                    print(f"!!! ROUTER UNSTABLE: {name} | Grad {gnorm:.2f} | Scaling...")
+                    # multiplying on 0.1 to stabilize
+                    param.grad.data.mul_(0.1)
+            if any(k in name for k in ['expert', 'router', 'A_log']):
+                norm = torch.norm(param).item()
+                # values must be > 1e-3
+                if norm < 1e-3:
+                    print(f"!!! COLLAPSE: {name} | Kicking with Gaussian Noise...")
+                    param.add_(torch.randn_like(param) * 0.02)
+                # if a_log becomes too big then we reset it
+                if 'A_log' in name and param.mean() > -0.1:
+                    print(f"--- RESETTING LRU MEMORY: {name} ---")
+                    param.copy_(torch.linspace(-1.0, -2.0, param.size(0)).to(device))
+            
+            # now we check ram
+            ram_p = psutil.virtual_memory().percent
+            writer.add_scalar('System/RAM_Usage', ram_p, i)
+            if ram_p > 85:
+                print(f'RAM CRITICAL!!! RESETTING DYNAMO')
+                torch._dynamo.reset()
+            print(">>> [THERMAL GUARD] Cooling 120s")
+            time.sleep(30)
+            data_queue.get()
+            start_time += 30
