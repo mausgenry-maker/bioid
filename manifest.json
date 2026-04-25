@@ -1,9 +1,13 @@
 {
+  "name": "BioID Elite",
   "short_name": "BioID",
-  "name": "BioID Elite System",
-  "start_url": "./index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#2ecc71",
-  "orientation": "portrait"
+  "icons": [{
+    "src": "https://cdn-icons-png.flaticon.com/512/3039/3039430.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }]
 }
