@@ -3,120 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Pro v6.0</title>
+    <title>BioID Corporate Pro v7.0</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
-        :root { --green: #2ecc71; --red: #e74c3c; --blue: #3498db; --grey: #555; --dark: #000; }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: sans-serif; background: var(--dark); color: #fff; height: 100vh; overflow: hidden; }
-        
-        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; }
+        :root { --p: #00ff88; --bg: #050505; --card: #121212; --red: #ff4d4d; --blue: #00d9ff; --grey: #333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: #fff; height: 100vh; overflow: hidden; }
+
+        /* Экраны */
+        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; background: var(--bg); }
         .screen.active { display: flex; }
 
-        /* Админка и Месяцы */
-        .toolbar { padding: 15px; display: flex; gap: 10px; overflow-x: auto; background: #111; }
-        .m-btn { padding: 8px 15px; background: #222; border-radius: 8px; font-size: 12px; white-space: nowrap; }
-        .m-btn.active { background: var(--blue); }
+        /* Верхняя панель */
+        .top-bar { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--card); border-bottom: 1px solid #222; }
+        .top-bar h2 { font-size: 18px; letter-spacing: 1px; color: var(--p); }
 
-        .admin-scroll { flex: 1; overflow-y: auto; padding: 10px; }
-        .emp-card { background: #111; border-radius: 15px; padding: 15px; margin-bottom: 10px; }
+        /* Нижнее меню (Navigation) */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: var(--card); display: flex; border-top: 1px solid #222; z-index: 1000; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; transition: 0.3s; }
+        .nav-item.active { color: var(--p); }
+        .nav-item b { font-size: 20px; margin-bottom: 4px; }
+
+        /* Списки и карточки */
+        .content { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 90px; }
+        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #222; }
         
-        /* Статусы */
-        .cal-grid { display: flex; gap: 5px; overflow-x: auto; padding: 10px 0; }
-        .d-box { min-width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; background: var(--grey); }
-        .d-box.green { background: var(--green); color: #000; }
-        .d-box.red { background: var(--red); }
-        .d-box.yellow { background: #f1c40f; color: #000; }
+        /* Сетка календаря */
+        .cal-grid { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
+        .day { min-width: 45px; height: 45px; border-radius: 10px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; transition: 0.2s; }
+        .day.green { background: var(--p); color: #000; font-weight: bold; }
+        .day.red { background: var(--red); }
+        .day.yellow { background: #f1c40f; color: #000; }
 
-        /* Терминал - Выбор действия */
-        #confirm-ui { position: absolute; bottom: 5%; left: 5%; right: 5%; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 20px; display: none; border: 1px solid var(--blue); text-align: center; }
-        .act-btn { flex: 1; padding: 15px; border-radius: 10px; border: none; font-weight: bold; margin: 5px; }
+        /* Кнопки */
+        .btn { padding: 12px 20px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-p { background: var(--p); color: #000; }
+        .btn-outline { background: none; border: 1px solid #444; color: #fff; }
+        .btn-red { background: var(--red); color: #fff; }
 
-        video { width: 100%; height: 60vh; object-fit: cover; transform: scaleX(-1); }
+        /* Терминал */
+        #video { width: 100%; height: 55vh; object-fit: cover; border-bottom: 2px solid var(--p); }
+        #overlay { position: absolute; bottom: 80px; left: 20px; right: 20px; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 20px; border: 1px solid var(--p); display: none; text-align: center; }
+
+        /* Формы */
+        input, select { width: 100%; padding: 14px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 10px; margin-bottom: 15px; }
+        
+        .month-selector { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
+        .m-chip { padding: 6px 15px; background: #222; border-radius: 20px; font-size: 12px; white-space: nowrap; }
+        .m-chip.active { background: var(--p); color: #000; }
     </style>
 </head>
 <body>
 
-    <div id="launcher" class="screen active" style="align-items:center; justify-content:center; text-align:center">
-        <h1>BioID <span style="color:var(--blue)">PRO</span></h1>
-        <p id="msg" style="margin: 20px 0; color:#888">ЗАГРУЗКА...</p>
-        <button onclick="app.ui('user-terminal')" class="act-btn" style="background:var(--green); max-width:250px">ТЕРМИНАЛ</button>
-        <button onclick="app.ui('admin-dashboard')" class="act-btn" style="background:var(--blue); max-width:250px">АДМИНКА</button>
-    </div>
-
-    <div id="user-terminal" class="screen">
+    <!-- Экран 1: ТЕРМИНАЛ -->
+    <div id="scr-term" class="screen active">
+        <div class="top-bar"><h2>BIOID TERMINAL</h2></div>
         <video id="video" autoplay playsinline muted></video>
-        <div id="status-text" style="text-align:center; padding:20px; font-size:20px">СКАНИРОВАНИЕ...</div>
-        
-        <div id="confirm-ui">
-            <h2 id="user-welcome">ПРИВЕТ, ИМЯ</h2>
-            <div style="display:flex; margin-top:15px">
-                <button class="act-btn" style="background:var(--green)" onclick="app.confirmAction('IN')">ВХОД</button>
-                <button class="act-btn" style="background:var(--red)" onclick="app.confirmAction('OUT')">ВЫХОД</button>
-            </div>
-            <button onclick="app.closeConfirm()" style="background:none; color:#777; border:none; margin-top:10px">ОТМЕНА</button>
+        <div class="content" style="text-align:center">
+            <h1 id="scan-status" style="color:var(--p); margin-top:20px">ПОИСК ЛИЦА...</h1>
+            <p style="color:#555">Встаньте перед камерой</p>
         </div>
-        <button onclick="location.reload()" style="position:absolute; top:10px; left:10px; padding:10px; background:#222; border-radius:5px; border:none; color:#fff">←</button>
+        <div id="overlay">
+            <h2 id="user-name">Имя Фамилия</h2>
+            <div style="display:flex; gap:10px; margin-top:15px">
+                <button class="btn btn-p" style="flex:1" onclick="app.log('IN')">ВХОД</button>
+                <button class="btn btn-red" style="flex:1" onclick="app.log('OUT')">ВЫХОД</button>
+            </div>
+            <button class="btn btn-outline" style="width:100%; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
+        </div>
     </div>
 
-    <div id="admin-dashboard" class="screen">
-        <div class="toolbar" id="month-picker"></div>
-        <div class="admin-scroll" id="emp-list"></div>
-        <button onclick="location.reload()" style="padding:15px; background:var(--blue); border:none; font-weight:bold">ВЕРНУТЬСЯ В МЕНЮ</button>
+    <!-- Экран 2: БАЗА / КАЛЕНДАРЬ -->
+    <div id="scr-base" class="screen">
+        <div class="top-bar">
+            <h2>ПОСЕЩАЕМОСТЬ</h2>
+            <button class="btn btn-p" style="padding:5px 10px" onclick="app.downloadReport()">ОТЧЕТ .TXT</button>
+        </div>
+        <div class="content">
+            <div class="month-selector" id="month-list"></div>
+            <div id="attendance-list"></div>
+        </div>
+    </div>
+
+    <!-- Экран 3: СОТРУДНИКИ (Add/Del) -->
+    <div id="scr-staff" class="screen">
+        <div class="top-bar"><h2>УПРАВЛЕНИЕ ШТАТОМ</h2></div>
+        <div class="content">
+            <div class="card">
+                <h3>НОВЫЙ КОНТРАКТ</h3><br>
+                <input type="text" id="reg-name" placeholder="ФИО сотрудника">
+                <input type="file" id="reg-file" accept="image/*" capture="user">
+                <button class="btn btn-p" style="width:100%" onclick="app.register()">ЗАРЕГИСТРИРОВАТЬ</button>
+            </div>
+            <div id="staff-list"></div>
+        </div>
+    </div>
+
+    <!-- Навигация -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="app.ui('scr-term', this)"><b>📷</b>СКАНЕР</div>
+        <div class="nav-item" onclick="app.ui('scr-base', this)"><b>📅</b>БАЗА</div>
+        <div class="nav-item" onclick="app.ui('scr-staff', this)"><b>👥</b>ШТАТ</div>
+        <div class="nav-item" onclick="location.reload()"><b>✕</b>ВЫХОД</div>
     </div>
 
 <script>
-let database;
-const months = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+let db;
 let currentMonth = new Date().getMonth();
 let currentUser = null;
+const months = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
 
 const app = {
     async init() {
-        const req = indexedDB.open("BioCorporate_v6", 1);
+        const req = indexedDB.open("BioID_Enterprise_v7", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
             d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
         };
-        req.onsuccess = e => {
-            database = e.target.result;
-            this.loadModels();
-        };
+        req.onsuccess = e => { db = e.target.result; this.loadModels(); };
     },
 
     async loadModels() {
-        const path = './models';
-        await faceapi.nets.tinyFaceDetector.loadFromUri(path);
-        await faceapi.nets.faceLandmark68Net.loadFromUri(path);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(path);
-        document.getElementById('msg').innerText = "СИСТЕМА ГОТОВА";
+        const p = './models';
+        await faceapi.nets.tinyFaceDetector.loadFromUri(p);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(p);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(p);
+        this.startCamera();
     },
 
-    ui(id) {
+    ui(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(id === 'user-terminal') this.startCamera();
-        if(id === 'admin-dashboard') this.renderAdmin();
+        if(el) el.classList.add('active');
+        if(id === 'scr-base') this.renderBase();
+        if(id === 'scr-staff') this.renderStaff();
     },
 
     async startCamera() {
         const v = document.getElementById('video');
-        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        v.srcObject = s;
-        this.scanLoop();
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            v.srcObject = s;
+            this.scan();
+        } catch(e) { alert("Камера недоступна"); }
     },
 
-    async scanLoop() {
+    async scan() {
         const v = document.getElementById('video');
-        const workers = await this.getStore("workers");
-        const loop = setInterval(async () => {
-            if(currentUser) return; // Ждем подтверждения
+        setInterval(async () => {
+            if(currentUser || !document.getElementById('scr-term').classList.contains('active')) return;
+            const workers = await this.get("workers");
             const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if(det && workers.length) {
                 for(let w of workers) {
                     if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.5) {
-                        this.showConfirm(w);
+                        currentUser = w;
+                        document.getElementById('user-name').innerText = w.name;
+                        document.getElementById('overlay').style.display = 'block';
                         break;
                     }
                 }
@@ -124,99 +169,95 @@ const app = {
         }, 1000);
     },
 
-    showConfirm(worker) {
-        currentUser = worker;
-        document.getElementById('user-welcome').innerText = worker.name;
-        document.getElementById('confirm-ui').style.display = 'block';
-    },
-
-    closeConfirm() {
-        currentUser = null;
-        document.getElementById('confirm-ui').style.display = 'none';
-    },
-
-    async confirmAction(type) {
+    async log(type) {
         const date = new Date().toISOString().split('T')[0];
-        const tx = database.transaction("logs", "readwrite");
-        tx.objectStore("logs").add({
-            name: currentUser.name,
-            date: date,
-            type: type, // IN или OUT
-            time: new Date().toLocaleTimeString(),
-            timestamp: Date.now()
-        });
-        alert(type === 'IN' ? "Вход зафиксирован" : "Выход зафиксирован");
-        this.closeConfirm();
+        const tx = db.transaction("logs", "readwrite");
+        tx.objectStore("logs").add({ name: currentUser.name, date, type, time: new Date().toLocaleTimeString() });
+        this.closeOverlay();
+        alert("Записано: " + type);
     },
 
-    async renderAdmin() {
-        const picker = document.getElementById('month-picker');
-        picker.innerHTML = months.map((m, i) => `
-            <div class="m-btn ${i===currentMonth?'active':''}" onclick="app.setMonth(${i})">${m}</div>
+    closeOverlay() { currentUser = null; document.getElementById('overlay').style.display = 'none'; },
+
+    async register() {
+        const n = document.getElementById('reg-name').value, f = document.getElementById('reg-file').files[0];
+        if(!n || !f) return alert("Данные?");
+        const img = await faceapi.bufferToImage(f);
+        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        if(det) {
+            const reader = new FileReader(); reader.readAsDataURL(f);
+            reader.onload = () => {
+                db.transaction("workers", "readwrite").objectStore("workers").put({name: n, desc: Array.from(det.descriptor), pic: reader.result});
+                alert("Сотрудник добавлен");
+                this.renderStaff();
+            };
+        } else alert("Лицо не найдено");
+    },
+
+    async renderStaff() {
+        const workers = await this.get("workers");
+        document.getElementById('staff-list').innerHTML = workers.map(w => `
+            <div class="card" style="display:flex; align-items:center; justify-content:space-between">
+                <div style="display:flex; align-items:center; gap:15px">
+                    <img src="${w.pic}" style="width:40px; height:40px; border-radius:50%; object-fit:cover">
+                    <b>${w.name}</b>
+                </div>
+                <button class="btn btn-red" style="padding:5px 10px" onclick="app.delStaff('${w.name}')">УДАЛИТЬ</button>
+            </div>
+        `).join('');
+    },
+
+    async delStaff(name) { if(confirm("Уволить сотрудника?")) { db.transaction("workers","readwrite").objectStore("workers").delete(name); this.renderStaff(); } },
+
+    async renderBase() {
+        document.getElementById('month-list').innerHTML = months.map((m, i) => `
+            <div class="m-chip ${i===currentMonth?'active':''}" onclick="app.setMonth(${i})">${m}</div>
         `).join('');
 
-        const workers = await this.getStore("workers");
-        const logs = await this.getStore("logs");
-        const list = document.getElementById('emp-list');
-        
+        const workers = await this.get("workers");
+        const logs = await this.get("logs");
+        const list = document.getElementById('attendance-list');
+        const daysInMonth = new Date(2026, currentMonth + 1, 0).getDate();
+
         list.innerHTML = workers.map(w => {
-            const wLogs = logs.filter(l => l.name === w.name && new Date(l.date).getMonth() === currentMonth);
-            return `
-                <div class="emp-card">
-                    <h3>${w.name}</h3>
-                    <div class="cal-grid">${this.renderDays(w.name, logs)}</div>
-                    <div style="font-size:12px; color:#888; margin-top:5px">
-                        ${this.calcStats(w.name, logs)}
-                    </div>
-                </div>
-            `;
+            let daysHtml = '';
+            for(let i=1; i<=daysInMonth; i++) {
+                const dStr = `2026-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const dayLogs = logs.filter(l => l.name === w.name && l.date === dStr);
+                let status = dayLogs.length ? (dayLogs.some(l => l.type==='OUT') ? 'green' : 'yellow') : '';
+                if(dayLogs.some(l => l.type==='ABSENT')) status = 'red';
+                daysHtml += `<div class="day ${status}" onclick="app.setManual('${w.name}','${dStr}')">${i}</div>`;
+            }
+            return `<div class="card"><b>${w.name}</b><div class="cal-grid">${daysHtml}</div></div>`;
         }).join('');
     },
 
-    setMonth(m) { currentMonth = m; this.renderAdmin(); },
+    setMonth(m) { currentMonth = m; this.renderBase(); },
 
-    renderDays(name, logs) {
-        let h = '';
-        const year = new Date().getFullYear();
-        const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
-        
-        for(let i=1; i<=daysInMonth; i++) {
-            const dateStr = `${year}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-            const dayLogs = logs.filter(l => l.name === name && l.date === dateStr);
-            
-            let status = '';
-            if(dayLogs.length === 0) status = '';
-            else if(dayLogs.some(l => l.type === 'IN') && dayLogs.some(l => l.type === 'OUT')) status = 'green';
-            else if(dayLogs.some(l => l.type === 'IN')) status = 'yellow';
-            else status = 'red';
-
-            h += `<div class="d-box ${status}" onclick="app.dayDetail('${name}', '${dateStr}')">${i}</div>`;
-        }
-        return h;
+    async setManual(name, date) {
+        const status = prompt("1: Был (Зел), 2: Прогул (Крас), 3: Очистить");
+        const tx = db.transaction("logs", "readwrite");
+        if(status === '1') tx.objectStore("logs").add({name, date, type: 'OUT', time: 'Вручную'});
+        if(status === '2') tx.objectStore("logs").add({name, date, type: 'ABSENT'});
+        setTimeout(() => this.renderBase(), 200);
     },
 
-    async dayDetail(name, date) {
-        const logs = await this.getStore("logs");
-        const dayLogs = logs.filter(l => l.name === name && l.date === date);
-        if(!dayLogs.length) {
-            if(confirm("Отметить прогул (Красный)?")) {
-                database.transaction("logs","readwrite").objectStore("logs").add({name, date, type: 'ABSENT'});
-                this.renderAdmin();
-            }
-            return;
-        }
-        let info = `Сотрудник: ${name}\nДата: ${date}\n\n`;
-        dayLogs.forEach(l => info += `${l.type}: ${l.time}\n`);
-        alert(info);
+    async downloadReport() {
+        const workers = await this.get("workers");
+        const logs = await this.get("logs");
+        let txt = "ОТЧЕТ ПО ПОСЕЩАЕМОСТИ - " + months[currentMonth] + "\n\n";
+        workers.forEach(w => {
+            const wLogs = logs.filter(l => l.name === w.name && new Date(l.date).getMonth() === currentMonth);
+            txt += `${w.name}: Присутствовал ${[...new Set(wLogs.map(l => l.date))].length} дн.\n`;
+        });
+        const blob = new Blob([txt], {type: "text/plain"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `report_${months[currentMonth]}.txt`;
+        a.click();
     },
 
-    calcStats(name, logs) {
-        const monthLogs = logs.filter(l => l.name === name && new Date(l.date).getMonth() === currentMonth);
-        const days = [...new Set(monthLogs.map(l => l.date))].length;
-        return `Рабочих дней: ${days} | Отработано: ~${days * 8}ч.`;
-    },
-
-    getStore(n) { return new Promise(r => database.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
+    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
 };
 
 window.onload = () => app.init();
