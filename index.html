@@ -3,114 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Elite v4.5</title>
+    <title>BioID Enterprise v5.0</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
-        :root { --green: #2ecc71; --red: #e74c3c; --blue: #3498db; --dark: #0a0a0a; }
+        :root { --primary: #2ecc71; --accent: #3498db; --danger: #e74c3c; --dark-card: #111; --text-muted: #888; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
         
         .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; }
         .screen.active { display: flex; }
 
-        /* HEADER */
-        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); }
-        .btn-close { padding: 10px 20px; background: #333; border-radius: 10px; font-size: 14px; }
+        /* Навигация */
+        .nav { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; background: #000; z-index: 100; }
+        .nav-btn { padding: 8px 15px; background: #222; border-radius: 8px; font-size: 12px; font-weight: bold; }
 
-        /* LAUNCHER */
-        #launcher { justify-content: center; align-items: center; text-align: center; padding: 20px; }
-        .main-btn { width: 100%; max-width: 300px; padding: 20px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; margin: 10px 0; }
+        /* Дашборд Аналитики */
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        .stat-card { background: var(--dark-card); padding: 15px; border-radius: 15px; border-left: 4px solid var(--primary); }
+        .stat-card h4 { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+        .stat-card p { font-size: 20px; font-weight: bold; margin-top: 5px; }
 
-        /* TERMINAL */
-        #user-terminal { background: #000; }
-        #video { width: 100%; height: 70vh; object-fit: cover; transform: scaleX(-1); border-bottom: 2px solid var(--green); }
-        .status-bar { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: var(--green); text-transform: uppercase; }
-
-        /* ADMIN - MOBILE OPTIMIZED */
-        .admin-scroll { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 100px; }
-        .worker-card { background: #111; border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #222; }
-        .cal-row { display: flex; overflow-x: auto; gap: 8px; padding: 10px 0; scroll-snap-type: x mandatory; }
-        .day-box { 
-            min-width: 45px; height: 45px; background: #222; border-radius: 8px; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 10px; flex-shrink: 0; transition: 0.2s;
-        }
-        .day-box.present { background: var(--green); color: #000; font-weight: bold; }
-        .day-box.absent { background: var(--red); }
+        /* Список сотрудников */
+        .admin-scroll { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 120px; }
+        .employee-card { background: var(--dark-card); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid #222; }
+        .emp-info { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .emp-info img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
         
-        /* КНОПКА ДОБАВЛЕНИЯ */
-        .fab { position: fixed; bottom: 30px; right: 20px; background: var(--blue); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; padding: 20px; justify-content: center; align-items: center; }
+        /* Компактный календарь */
+        .cal-strip { display: flex; overflow-x: auto; gap: 6px; padding: 5px 0; scrollbar-width: none; }
+        .cal-strip::-webkit-scrollbar { display: none; }
+        .day-node { min-width: 35px; height: 35px; background: #222; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+        .day-node.present { background: var(--primary); color: #000; font-weight: bold; }
+
+        /* Камера и Терминал */
+        #video { width: 100%; height: 60vh; object-fit: cover; transform: scaleX(-1); border-bottom: 3px solid var(--primary); }
+        .scan-overlay { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; }
+        #scan-name { font-size: 24px; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+
+        /* Формы и кнопки */
+        .fab { position: fixed; bottom: 30px; right: 20px; background: var(--primary); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 10px 20px rgba(46,204,113,0.3); z-index: 200; color: #000; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
         .modal.active { display: flex; }
-        .modal-content { background: #111; width: 100%; padding: 20px; border-radius: 20px; border: 1px solid var(--green); }
-        input[type="text"] { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 10px; margin: 10px 0; }
+        .modal-body { background: #111; width: 100%; padding: 25px; border-radius: 25px; border: 1px solid #333; }
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: #fff; border-radius: 12px; margin: 10px 0; font-size: 16px; }
+        .save-btn { width: 100%; padding: 15px; background: var(--primary); color: #000; border: none; border-radius: 12px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <!-- Launcher -->
-    <div id="launcher" class="screen active">
-        <h1 style="font-size: 40px; margin-bottom: 5px;">BioID <span style="color:var(--green)">ELITE</span></h1>
-        <p id="msg" style="color:#666; margin-bottom:40px">ЗАГРУЗКА...</p>
-        <button class="main-btn" style="background:var(--green); color:#000" id="btn1" onclick="app.openTerminal()" disabled>📷 ТЕРМИНАЛ</button>
-        <button class="main-btn" style="background:var(--blue); color:#fff" id="btn2" onclick="app.openAdmin()" disabled>⚙️ УПРАВЛЕНИЕ</button>
+    <div id="launcher" class="screen active" style="justify-content: center; align-items: center; text-align: center; padding: 30px;">
+        <h1 style="font-size: 42px; margin-bottom: 10px;">BioID <span style="color:var(--primary)">ENT</span></h1>
+        <p id="msg" style="color:var(--text-muted); margin-bottom: 40px;">ЗАГРУЗКА БИЗНЕС-МОДУЛЕЙ...</p>
+        <button class="save-btn" id="b1" onclick="ent.openTerminal()" disabled style="max-width:300px">📷 ТЕРМИНАЛ ВХОДА</button>
+        <button class="save-btn" id="b2" onclick="ent.openAdmin()" disabled style="max-width:300px; background:var(--accent); margin-top:15px">⚙️ ПАНЕЛЬ УПРАВЛЕНИЯ</button>
     </div>
 
     <!-- Terminal -->
     <div id="user-terminal" class="screen">
-        <div class="header">
-            <span>TERMINAL v4.5</span>
-            <div class="btn-close" onclick="location.reload()">ВЫХОД</div>
+        <div class="nav">
+            <span>ENT TERMINAL v5.0</span>
+            <div class="nav-btn" onclick="location.reload()">ВЫХОД</div>
         </div>
         <video id="video" autoplay playsinline muted></video>
-        <div class="status-bar" id="status">SCANNING...</div>
+        <div class="scan-overlay">
+            <div id="scan-name">СКАНИРОВАНИЕ...</div>
+            <div id="scan-time" style="color:#444">ОЖИДАНИЕ ОБЪЕКТА</div>
+        </div>
     </div>
 
-    <!-- Admin -->
+    <!-- Admin Panel -->
     <div id="admin-dashboard" class="screen">
-        <div class="header">
-            <h2 style="color:var(--green)">СОТРУДНИКИ</h2>
-            <div class="btn-close" onclick="location.reload()">НАЗАД</div>
+        <div class="nav">
+            <h2 style="color:var(--primary)">DASHBOARD</h2>
+            <div class="nav-btn" onclick="location.reload()">НАЗАД</div>
         </div>
-        <div class="admin-scroll" id="workers-list">
-            <!-- Сюда грузятся карточки сотрудников -->
+        
+        <!-- Аналитика -->
+        <div class="analytics-grid" id="analytics-data">
+            <div class="stat-card"><h4>Штат</h4><p id="total-staff">0</p></div>
+            <div class="stat-card" style="border-color:var(--accent)"><h4>Явка %</h4><p id="attendance-rate">0%</p></div>
         </div>
-        <div class="fab" onclick="app.toggleModal(true)">+</div>
+
+        <div class="admin-scroll" id="emp-list">
+            <!-- Список сотрудников -->
+        </div>
+
+        <div class="fab" onclick="ent.toggleModal(true)">+</div>
     </div>
 
-    <!-- Add Worker Modal -->
+    <!-- Modal -->
     <div id="modal" class="modal">
-        <div class="modal-content">
-            <h3>НОВЫЙ СОТРУДНИК</h3>
-            <input type="text" id="reg-name" placeholder="Имя Фамилия">
-            <p style="font-size:12px; color:#666; margin-top:10px">Выберите четкое фото лица:</p>
-            <input type="file" id="reg-file" accept="image/*" style="margin:15px 0">
-            <div style="display:flex; gap:10px">
-                <button class="main-btn" style="background:var(--green); margin:0" onclick="app.register()">СОХРАНИТЬ</button>
-                <button class="main-btn" style="background:#333; margin:0; color:#fff" onclick="app.toggleModal(false)">ОТМЕНА</button>
-            </div>
+        <div class="modal-body">
+            <h3 style="color:var(--primary)">НОВЫЙ КОНТРАКТ</h3>
+            <input type="text" id="reg-name" placeholder="ФИО сотрудника">
+            <input type="number" id="reg-salary" placeholder="Ставка за смену ($)">
+            <input type="file" id="reg-file" accept="image/*" style="border:none; padding:10px 0">
+            <button class="save-btn" onclick="ent.register()">ПОДПИСАТЬ</button>
+            <button class="save-btn" style="background:#222; color:#fff" onclick="ent.toggleModal(false)">ОТМЕНА</button>
         </div>
     </div>
 
 <script>
-const dbName = "BioEliteDB_45";
-let database;
+const dbName = "BioEnterpriseDB_v5";
+let db;
 
-// --- СЕРДЦЕ ПРИЛОЖЕНИЯ ---
-const app = {
+const ent = {
     async init() {
         await this.initDB();
         try {
-            const path = './models';
-            await faceapi.nets.tinyFaceDetector.loadFromUri(path);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(path);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(path);
-            document.getElementById('msg').innerText = "СИСТЕМА АКТИВНА";
-            document.getElementById('btn1').disabled = document.getElementById('btn2').disabled = false;
-        } catch(e) {
-            document.getElementById('msg').innerText = "ОШИБКА МОДЕЛЕЙ (Проверьте папку models)";
-        }
+            await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
+            document.getElementById('msg').innerText = "КОРПОРАТИВНАЯ СЕТЬ АКТИВНА";
+            document.getElementById('b1').disabled = document.getElementById('b2').disabled = false;
+        } catch(e) { document.getElementById('msg').innerText = "ОШИБКА МОДЕЛЕЙ"; }
     },
 
     async initDB() {
@@ -121,138 +128,123 @@ const app = {
                 d.createObjectStore("workers", {keyPath: "name"});
                 d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
             };
-            req.onsuccess = e => { database = e.target.result; r(); };
+            req.onsuccess = e => { db = e.target.result; r(); };
         });
     },
 
     async openTerminal() {
         this.switch('user-terminal');
         const v = document.getElementById('video');
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user", width: 640, height: 480 } 
-            });
-            v.srcObject = s;
-            v.onloadedmetadata = () => { v.play(); this.scan(); };
-        } catch(e) {
-            alert("КАМЕРА ЗАБЛОКИРОВАНА. Разрешите доступ в настройках браузера.");
-        }
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        v.srcObject = s;
+        v.onloadedmetadata = () => { v.play(); this.detect(); };
     },
 
-    async scan() {
+    async detect() {
         const v = document.getElementById('video');
         const workers = await this.getStore("workers");
-        const status = document.getElementById('status');
-        
         setInterval(async () => {
             const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if(det && workers.length) {
                 for(let w of workers) {
-                    const dist = faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc));
-                    if(dist < 0.5) {
-                        status.innerText = "УЗНАН: " + w.name;
-                        status.style.color = "var(--green)";
-                        this.log(w.name);
+                    if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.5) {
+                        document.getElementById('scan-name').innerText = w.name;
+                        this.saveLog(w.name);
                         return;
                     }
                 }
-                status.innerText = "НЕИЗВЕСТНЫЙ";
-                status.style.color = "var(--red)";
+                document.getElementById('scan-name').innerText = "НЕИЗВЕСТНЫЙ";
             }
-        }, 800);
+        }, 1000);
+    },
+
+    async saveLog(name) {
+        const date = new Date().toISOString().split('T')[0];
+        const logs = await this.getStore("logs");
+        if(!logs.some(l => l.name === name && l.date === date)) {
+            const tx = db.transaction("logs", "readwrite");
+            tx.objectStore("logs").add({name, date, time: new Date().toLocaleTimeString()});
+        }
     },
 
     async openAdmin() {
         this.switch('admin-dashboard');
-        const list = document.getElementById('workers-list');
         const workers = await this.getStore("workers");
         const logs = await this.getStore("logs");
-        const today = new Date().getDate();
-
-        list.innerHTML = workers.map(w => `
-            <div class="worker-card">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                    <h3>${w.name}</h3>
-                    <button onclick="app.del('${w.name}')" style="background:none; border:none; color:var(--red)">Удалить</button>
-                </div>
-                <div class="cal-row">
-                    ${this.renderDays(w.name, logs)}
-                </div>
-            </div>
-        `).join('');
-    },
-
-    renderDays(name, logs) {
-        let html = '';
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         
-        for(let i=1; i<=daysInMonth; i++) {
-            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-            const isOk = logs.some(l => l.name === name && l.date === dateStr);
-            html += `
-                <div class="day-box ${isOk?'present':''}" onclick="app.manualLog('${name}', '${dateStr}', ${isOk})">
-                    <span>${i}</span>
-                    <span style="font-size:14px">${isOk?'✓':''}</span>
-                </div>`;
-        }
-        return html;
+        // Аналитика
+        document.getElementById('total-staff').innerText = workers.length;
+        const rate = workers.length ? Math.round((logs.filter(l => l.date === new Date().toISOString().split('T')[0]).length / workers.length) * 100) : 0;
+        document.getElementById('attendance-rate').innerText = rate + "%";
+
+        // Список
+        const list = document.getElementById('emp-list');
+        list.innerHTML = workers.map(w => {
+            const wLogs = logs.filter(l => l.name === w.name);
+            const salary = wLogs.length * (w.salary || 0);
+            return `
+                <div class="employee-card">
+                    <div class="emp-info">
+                        <img src="${w.pic}">
+                        <div>
+                            <h3 style="margin:0">${w.name}</h3>
+                            <span style="color:var(--primary); font-size:12px">Баланс: $${salary}</span>
+                        </div>
+                    </div>
+                    <div class="cal-strip">${this.renderCal(w.name, logs)}</div>
+                </div>
+            `;
+        }).join('');
     },
 
-    async manualLog(name, date, currentStatus) {
-        const tx = database.transaction(["logs"], "readwrite");
-        const store = tx.objectStore("logs");
-        if(currentStatus) {
-            // Удаляем лог (упрощенно: очищаем за этот день)
-            store.openCursor().onsuccess = e => {
-                const cursor = e.target.result;
-                if(cursor) {
-                    if(cursor.value.name === name && cursor.value.date === date) cursor.delete();
-                    cursor.continue();
-                }
-            };
-        } else {
-            store.add({name, date});
+    renderCal(name, logs) {
+        let h = '';
+        for(let i=1; i<=31; i++) {
+            const d = `2026-04-${String(i).padStart(2,'0')}`; // Пример на апрель
+            const ok = logs.some(l => l.name === name && l.date === d);
+            h += `<div class="day-node ${ok?'present':''}" onclick="ent.manualLog('${name}','${d}',${ok})">${i}</div>`;
         }
-        setTimeout(() => this.openAdmin(), 300); // Обновляем экран
+        return h;
+    },
+
+    async manualLog(name, date, ok) {
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
+        if(ok) {
+            store.openCursor().onsuccess = e => {
+                const c = e.target.result;
+                if(c) { if(c.value.name === name && c.value.date === date) c.delete(); c.continue(); }
+            };
+        } else { store.add({name, date}); }
+        setTimeout(() => this.openAdmin(), 200);
     },
 
     async register() {
-        const name = document.getElementById('reg-name').value;
-        const file = document.getElementById('reg-file').files[0];
-        if(!name || !file) return alert("Заполни всё!");
+        const n = document.getElementById('reg-name').value;
+        const s = document.getElementById('reg-salary').value;
+        const f = document.getElementById('reg-file').files[0];
+        if(!n || !f) return alert("Заполните данные!");
 
-        const img = await faceapi.bufferToImage(file);
+        const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
         
         if(det) {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                const tx = database.transaction("workers", "readwrite");
-                tx.objectStore("workers").put({name, desc: Array.from(det.descriptor), pic: reader.result});
-                this.toggleModal(false);
-                this.openAdmin();
+            const r = new FileReader(); r.readAsDataURL(f);
+            r.onload = () => {
+                db.transaction("workers", "readwrite").objectStore("workers").put({
+                    name: n, salary: parseInt(s), desc: Array.from(det.descriptor), pic: r.result
+                });
+                this.toggleModal(false); this.openAdmin();
             };
-        } else alert("Лицо не найдено на фото!");
+        } else alert("Лицо не найдено!");
     },
 
-    async log(name) {
-        const date = new Date().toISOString().split('T')[0];
-        const logs = await this.getStore("logs");
-        if(!logs.some(l => l.name === name && l.date === date)) {
-            const tx = database.transaction("logs", "readwrite");
-            tx.objectStore("logs").add({name, date});
-        }
-    },
-
-    async del(name) { if(confirm("Удалить?")) { database.transaction("workers","readwrite").objectStore("workers").delete(name); this.openAdmin(); } },
     switch(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); },
-    toggleModal(show) { document.getElementById('modal').classList.toggle('active', show); },
-    getStore(n) { return new Promise(r => database.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
+    toggleModal(s) { document.getElementById('modal').classList.toggle('active', s); },
+    getStore(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
 };
 
-window.onload = () => app.init();
+window.onload = () => ent.init();
 </script>
 </body>
 </html>
