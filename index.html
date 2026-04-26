@@ -3,115 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Business Pro</title>
+    <title>BioID Corp v8.5</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
-        :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #222; }
+        :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, system-ui, sans-serif; height: 100vh; overflow: hidden; }
 
-        /* Navigation */
         .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; padding-bottom: 90px; }
         .screen.active { display: flex; }
         
+        /* Nav Bar */
         .nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0a; display: flex; border-top: 1px solid #222; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; font-weight: 500; }
         .nav-item.active { color: var(--p); }
-        .nav-item i { font-style: normal; font-size: 24px; margin-bottom: 4px; }
+        .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
-        /* Top Bar */
-        .header { padding: 15px 20px; background: var(--card); border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .header h2 { font-size: 16px; color: var(--p); letter-spacing: 0.5px; }
+        /* Header */
+        .header { padding: 20px; background: var(--card); border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .header h2 { font-size: 18px; color: var(--p); letter-spacing: 0.5px; }
 
-        /* Scrolling Area */
+        /* Content */
         .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
         .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 15px; border: 1px solid #222; }
 
-        /* Calendar */
-        .month-selector { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; }
-        .month-selector::-webkit-scrollbar { display: none; }
-        .m-btn { padding: 10px 20px; background: #1a1a1a; border-radius: 12px; font-size: 13px; white-space: nowrap; color: #666; font-weight: bold; }
-        .m-btn.active { background: var(--p); color: #000; }
+        /* Month Selector */
+        .m-ctrl { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 12px; margin-bottom: 15px; padding: 5px; }
+        .m-btn { padding: 10px 15px; background: #222; border: none; color: #fff; border-radius: 8px; font-weight: bold; }
 
+        /* Calendar Grid */
         .cal-row { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
-        .day { min-width: 44px; height: 44px; border-radius: 12px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+        .cal-row::-webkit-scrollbar { display: none; }
+        .day { min-width: 45px; height: 45px; border-radius: 12px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: 0.2s; }
         .day.green { background: var(--p); color: #000; font-weight: bold; }
         .day.red { background: var(--red); color: #fff; }
         .day.yellow { background: var(--yellow); color: #000; }
 
-        /* Terminal Overlay */
-        #video { width: 100%; height: 50vh; object-fit: cover; border-bottom: 2px solid var(--p); background: #000; }
-        #overlay { position: absolute; bottom: 100px; left: 15px; right: 15px; background: rgba(0,0,0,0.95); padding: 30px; border-radius: 28px; border: 1px solid var(--p); display: none; text-align: center; z-index: 2000; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        /* Overlay */
+        #video { width: 100%; height: 50vh; object-fit: cover; background: #000; border-bottom: 2px solid var(--p); }
+        #overlay { position: absolute; bottom: 100px; left: 15px; right: 15px; background: rgba(0,0,0,0.95); padding: 30px; border-radius: 30px; border: 1px solid var(--p); display: none; text-align: center; z-index: 2000; box-shadow: 0 0 30px rgba(0,255,136,0.2); }
 
-        /* UI Elements */
-        .btn { padding: 16px; border: none; border-radius: 14px; font-weight: bold; font-size: 15px; width: 100%; margin-top: 12px; }
+        .btn { padding: 16px; border: none; border-radius: 14px; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; }
         .btn-p { background: var(--p); color: #000; }
-        .btn-sec { background: #222; color: #fff; }
         input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 12px; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN: SCANNER -->
+    <!-- SCANNER -->
     <div id="scr-scan" class="screen active">
         <video id="video" autoplay playsinline muted></video>
         <div class="scroll" style="text-align:center">
-            <h2 id="st-text" style="color:var(--p); margin-top:20px">ИНИЦИАЛИЗАЦИЯ...</h2>
-            <p style="color:#444; margin-top:5px">Система распознавания лиц активна</p>
+            <h2 id="st-text" style="color:var(--p); margin-top:10px">СИСТЕМА ЗАГРУЖАЕТСЯ...</h2>
         </div>
         <div id="overlay">
-            <h1 id="u-name" style="font-size:28px; margin-bottom:20px">---</h1>
-            <div style="display:flex; gap:12px">
+            <h1 id="u-name">---</h1>
+            <div style="display:flex; gap:10px; margin-top:20px">
                 <button class="btn btn-p" onclick="app.log('IN')">ВХОД</button>
                 <button class="btn" style="background:var(--red); color:#fff" onclick="app.log('OUT')">ВЫХОД</button>
             </div>
-            <button class="btn btn-sec" onclick="app.closeOverlay()">ОТМЕНА</button>
+            <button class="btn" style="background:#222; color:#fff" onclick="app.closeOverlay()">ОТМЕНА</button>
         </div>
     </div>
 
-    <!-- SCREEN: DATABASE -->
+    <!-- ATTENDANCE -->
     <div id="scr-base" class="screen">
-        <div class="header">
-            <h2>ОТЧЕТНОСТЬ 2026</h2>
-            <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button>
-        </div>
+        <div class="header"><h2>ОТЧЕТНОСТЬ</h2> <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button></div>
         <div class="scroll">
-            <div class="month-selector" id="month-nav"></div>
+            <div class="m-ctrl">
+                <button class="m-btn" onclick="app.changeMonth(-1)">←</button>
+                <span id="cur-m-name" style="font-weight:bold; letter-spacing:1px">---</span>
+                <button class="m-btn" onclick="app.changeMonth(1)">→</button>
+            </div>
             <div id="base-list"></div>
         </div>
     </div>
 
-    <!-- SCREEN: STAFF -->
+    <!-- STAFF -->
     <div id="scr-staff" class="screen">
         <div class="header"><h2>УПРАВЛЕНИЕ ШТАТОМ</h2></div>
         <div class="scroll">
             <div class="card">
-                <h3 style="margin-bottom:15px; font-size:14px; color:#666">НОВЫЙ СОТРУДНИК</h3>
-                <input type="text" id="reg-n" placeholder="ФИО полностью">
-                <input type="number" id="reg-rate" placeholder="Ставка в час (руб/$)">
+                <input type="text" id="reg-n" placeholder="Имя Фамилия">
+                <input type="number" id="reg-rate" placeholder="Ставка в час ($/₽)">
                 <input type="file" id="reg-f" accept="image/*" capture="user">
-                <button class="btn btn-p" onclick="app.reg()">ЗАРЕГИСТРИРОВАТЬ</button>
+                <button class="btn btn-p" onclick="app.reg()">СОЗДАТЬ АККАУНТ</button>
             </div>
             <div id="staff-list"></div>
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
     <div class="nav">
-        <div class="nav-item active" onclick="app.ui('scr-scan', this)"><i>📷</i>СКАНЕР</div>
-        <div class="nav-item" onclick="app.ui('scr-base', this)"><i>📅</i>БАЗА</div>
-        <div class="nav-item" onclick="app.ui('scr-staff', this)"><i>👥</i>ШТАТ</div>
+        <div class="nav-item active" onclick="app.ui('scr-scan', this)"><b>📷</b>СКАНЕР</div>
+        <div class="nav-item" onclick="app.ui('scr-base', this)"><b>📅</b>БАЗА</div>
+        <div class="nav-item" onclick="app.ui('scr-staff', this)"><b>👥</b>ШТАТ</div>
     </div>
 
 <script>
 let db;
-let curM = new Date().getMonth();
+let viewDate = new Date(); // Текущая дата для просмотра месяцев
 let curU = null;
-const mons = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 
 const app = {
     async init() {
-        const req = indexedDB.open("BioID_Mobile_v85", 1);
+        const req = indexedDB.open("BioCorp_Final_v85", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
@@ -126,9 +121,9 @@ const app = {
             await faceapi.nets.tinyFaceDetector.loadFromUri(p);
             await faceapi.nets.faceLandmark68Net.loadFromUri(p);
             await faceapi.nets.faceRecognitionNet.loadFromUri(p);
-            document.getElementById('st-text').innerText = "СИСТЕМА ГОТОВА";
+            document.getElementById('st-text').innerText = "СКАНЕР АКТИВЕН";
             this.start();
-        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА ЗАГРУЗКИ"; }
+        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА МОДЕЛЕЙ"; }
     },
 
     ui(id, el) {
@@ -142,25 +137,23 @@ const app = {
 
     async start() {
         const v = document.getElementById('video');
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-            v.srcObject = s;
-            setInterval(async () => {
-                if(curU || !document.getElementById('scr-scan').classList.contains('active')) return;
-                const ws = await this.get("workers");
-                const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-                if(det && ws.length) {
-                    for(let w of ws) {
-                        if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.5) {
-                            curU = w;
-                            document.getElementById('u-name').innerText = w.name;
-                            document.getElementById('overlay').style.display = 'block';
-                            break;
-                        }
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        v.srcObject = s;
+        setInterval(async () => {
+            if(curU || !document.getElementById('scr-scan').classList.contains('active')) return;
+            const ws = await this.get("workers");
+            const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+            if(det && ws.length) {
+                for(let w of ws) {
+                    if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.45) {
+                        curU = w;
+                        document.getElementById('u-name').innerText = w.name;
+                        document.getElementById('overlay').style.display = 'block';
+                        break;
                     }
                 }
-            }, 1000);
-        } catch(e) { alert("Доступ к камере запрещен"); }
+            }
+        }, 1000);
     },
 
     async log(t) {
@@ -180,7 +173,7 @@ const app = {
         const n = document.getElementById('reg-n').value, 
               r = document.getElementById('reg-rate').value,
               f = document.getElementById('reg-f').files[0];
-        if(!n || !f || !r) return alert("Заполните все поля!");
+        if(!n || !f || !r) return alert("Заполните данные!");
         const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
         if(det) {
@@ -189,9 +182,9 @@ const app = {
                 db.transaction("workers", "readwrite").objectStore("workers").put({
                     name: n, rate: parseFloat(r), desc: Array.from(det.descriptor), pic: rd.result
                 });
-                alert("Сотрудник добавлен!"); this.renderS();
+                alert("Сотрудник добавлен"); this.renderS();
             };
-        } else alert("Лицо не обнаружено на фото");
+        }
     },
 
     async renderS() {
@@ -199,32 +192,36 @@ const app = {
         document.getElementById('staff-list').innerHTML = ws.map(w => `
             <div class="card" style="display:flex; justify-content:space-between; align-items:center">
                 <div><b>${w.name}</b><br><small style="color:var(--p)">Ставка: ${w.rate}/ч</small></div>
-                <button class="btn" style="width:auto; background:var(--red); padding:8px 15px; margin:0" onclick="app.delS('${w.name}')">УДАЛИТЬ</button>
+                <button class="btn" style="width:auto; background:#222; color:var(--red); padding:8px 15px; margin:0" onclick="app.delS('${w.name}')">УДАЛИТЬ</button>
             </div>
         `).join('');
     },
 
-    async delS(n) { if(confirm("Удалить сотрудника и все его данные?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
+    async delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
+
+    changeMonth(dir) {
+        viewDate.setMonth(viewDate.getMonth() + dir);
+        this.renderB();
+    },
 
     async renderB() {
-        document.getElementById('month-nav').innerHTML = mons.map((m, i) => `
-            <div class="m-btn ${i===curM?'active':''}" onclick="app.curM=${i};app.renderB()">${m}</div>
-        `).join('');
+        const mNames = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
+        document.getElementById('cur-m-name').innerText = `${mNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
 
         const ws = await this.get("workers");
         const ls = await this.get("logs");
         const list = document.getElementById('base-list');
-        const dim = new Date(2026, curM + 1, 0).getDate();
+        const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
         list.innerHTML = ws.map(w => {
-            let dH = '', totalHours = 0;
+            let dH = '', totalH = 0;
             for(let i=1; i<=dim; i++) {
-                const ds = `2026-${String(curM+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                 const dl = ls.filter(l => l.name === w.name && l.date === ds);
                 
                 const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
                 let dayH = 0; if(cin && cout) dayH = (cout.ts - cin.ts) / 3600000;
-                totalHours += dayH;
+                totalH += dayH;
 
                 let st = dl.length ? (cout ? 'green' : 'yellow') : '';
                 if(dl.some(l => l.type==='ABSENT')) st = 'red';
@@ -232,49 +229,57 @@ const app = {
             }
             return `
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                        <b>${w.name}</b>
-                        <span style="color:var(--p); font-weight:bold">${(totalHours * w.rate).toFixed(0)} $</span>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+                        <b>${w.name}</b> 
+                        <span style="color:var(--p); font-weight:bold">${(totalH * w.rate).toFixed(1)} $</span>
                     </div>
                     <div class="cal-row">${dH}</div>
-                    <div style="margin-top:10px; font-size:11px; color:#555">Отработано: ${totalHours.toFixed(1)} ч.</div>
+                    <div style="margin-top:10px; font-size:11px; color:#666">Часов за месяц: ${totalH.toFixed(1)}</div>
                 </div>`;
         }).join('');
     },
 
     async edit(n, d) {
-        const s = prompt("1: Отработал (8ч), 2: Прогул, 3: ОЧИСТИТЬ");
+        const s = prompt("1: Был (8ч), 2: Прогул, 3: ОЧИСТИТЬ (Серый)");
+        if(!s) return;
         const all = await this.get("logs");
-        all.filter(l => l.name === n && l.date === d).forEach(l => db.transaction("logs","readwrite").objectStore("logs").delete(l.id));
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
+        all.filter(l => l.name === n && l.date === d).forEach(l => store.delete(l.id));
         
-        setTimeout(() => {
-            const tx = db.transaction("logs", "readwrite");
-            if(s === '1') {
-                tx.objectStore("logs").add({name: n, date: d, type: 'IN', ts: Date.now()});
-                tx.objectStore("logs").add({name: n, date: d, type: 'OUT', ts: Date.now() + 28800000});
+        tx.oncomplete = () => {
+            if(s === '1' || s === '2') {
+                const tx2 = db.transaction("logs", "readwrite");
+                if(s === '1') {
+                    tx2.objectStore("logs").add({name: n, date: d, type: 'IN', ts: Date.now()});
+                    tx2.objectStore("logs").add({name: n, date: d, type: 'OUT', ts: Date.now() + 28800000});
+                } else {
+                    tx2.objectStore("logs").add({name: n, date: d, type: 'ABSENT'});
+                }
+                tx2.oncomplete = () => this.renderB();
+            } else {
+                this.renderB();
             }
-            if(s === '2') tx.objectStore("logs").add({name: n, date: d, type: 'ABSENT'});
-            setTimeout(() => this.renderB(), 100);
-        }, 100);
+        };
     },
 
     async download() {
         const ws = await this.get("workers");
         const ls = await this.get("logs");
-        let t = `ОТЧЕТ BioID: ${mons[curM]} 2026\n` + "=".repeat(35) + "\n";
+        let t = `ОТЧЕТ BioID: ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n` + "=".repeat(40) + "\n";
         ws.forEach(w => {
             let h = 0;
-            const wl = ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === curM);
+            const wl = ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === viewDate.getMonth() && new Date(l.date).getFullYear() === viewDate.getFullYear());
             const days = [...new Set(wl.map(l => l.date))];
             days.forEach(d => {
                 const dayL = wl.filter(l => l.date === d);
                 const cin = dayL.find(l => l.type === 'IN'), cout = dayL.find(l => l.type === 'OUT');
                 if(cin && cout) h += (cout.ts - cin.ts) / 3600000;
             });
-            t += `${w.name.padEnd(18)} | Часы: ${h.toFixed(1).padStart(5)} | ЗП: ${(h * w.rate).toFixed(2)}\n`;
+            t += `${w.name.padEnd(20)} | Часы: ${h.toFixed(1).padStart(5)} | Итого: ${(h * w.rate).toFixed(2)}\n`;
         });
         const b = new Blob([t], {type:"text/plain"});
-        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `report_${mons[curM]}.txt`; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `report_${viewDate.getMonth()+1}_${viewDate.getFullYear()}.txt`; a.click();
     },
 
     get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
