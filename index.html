@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Corp v8.6</title>
+    <title>BioID Corp v8.7</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
@@ -14,59 +14,64 @@
         .screen.active { display: flex; }
         
         .nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0a; display: flex; border-top: 1px solid #222; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; font-weight: 500; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; }
         .nav-item.active { color: var(--p); }
         .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
-        .header { padding: 20px; background: var(--card); border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        .header h2 { font-size: 18px; color: var(--p); letter-spacing: 0.5px; }
+        .video-box { width: 100%; height: 60vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        
+        #cam-btn { 
+            position: absolute; z-index: 99; padding: 20px 40px; 
+            background: var(--p); color: #000; border: none; 
+            border-radius: 50px; font-weight: 900; font-size: 16px;
+            box-shadow: 0 0 30px rgba(0,255,136,0.5); 
+        }
 
         .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
-        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 15px; border: 1px solid #222; }
+        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; }
 
         .m-ctrl { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 12px; margin-bottom: 15px; padding: 5px; }
-        .m-btn { padding: 10px 15px; background: #222; border: none; color: #fff; border-radius: 8px; font-weight: bold; }
+        .m-btn { padding: 10px 15px; background: #222; border: none; color: #fff; border-radius: 8px; }
 
-        .cal-row { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
-        .day { min-width: 45px; height: 45px; border-radius: 12px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-        .day.green { background: var(--p); color: #000; font-weight: bold; }
+        .cal-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
+        .day { min-width: 40px; height: 40px; border-radius: 10px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+        .day.green { background: var(--p); color: #000; }
         .day.red { background: var(--red); color: #fff; }
         .day.yellow { background: var(--yellow); color: #000; }
 
-        /* Video Container Fix */
-        .video-box { width: 100%; height: 50vh; background: #111; position: relative; border-bottom: 2px solid var(--p); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        #video { width: 100%; height: 100%; object-fit: cover; }
-        #cam-btn { position: absolute; z-index: 10; padding: 15px 25px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,255,136,0.4); }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
 
-        #overlay { position: absolute; bottom: 100px; left: 15px; right: 15px; background: rgba(0,0,0,0.95); padding: 30px; border-radius: 30px; border: 1px solid var(--p); display: none; text-align: center; z-index: 2000; }
-
-        .btn { padding: 16px; border: none; border-radius: 14px; font-weight: bold; width: 100%; margin-top: 10px; font-size: 15px; }
+        .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; }
         .btn-p { background: var(--p); color: #000; }
-        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 12px; font-size: 16px; }
+        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="scr-scan" class="screen active">
         <div class="video-box">
-            <button id="cam-btn" onclick="app.startCamera()">ВКЛЮЧИТЬ КАМЕРУ</button>
+            <button id="cam-btn" onclick="app.startCamera()">НАЖМИТЕ ДЛЯ ЗАПУСКА КАМЕРЫ</button>
             <video id="video" autoplay playsinline muted></video>
         </div>
-        <div class="scroll" style="text-align:center">
-            <h2 id="st-text" style="color:var(--p); margin-top:10px; font-size: 14px;">ОЖИДАНИЕ ЗАПУСКА...</h2>
+        <div class="scroll">
+            <h3 id="st-text" style="text-align:center; color:var(--p); opacity: 0.7">СИСТЕМА ОЖИДАЕТ...</h3>
         </div>
+        
         <div id="overlay">
-            <h1 id="u-name">---</h1>
-            <div style="display:flex; gap:10px; margin-top:20px">
-                <button class="btn btn-p" onclick="app.log('IN')">ВХОД</button>
-                <button class="btn" style="background:var(--red); color:#fff" onclick="app.log('OUT')">ВЫХОД</button>
-            </div>
-            <button class="btn" style="background:#222; color:#fff" onclick="app.closeOverlay()">ОТМЕНА</button>
+            <h1 id="u-name" style="font-size: 32px; margin-bottom: 30px;">---</h1>
+            <button class="btn btn-p" onclick="app.log('IN')">ВХОД (START)</button>
+            <button class="btn" style="background:var(--red); color:#fff; margin-top:15px" onclick="app.log('OUT')">ВЫХОД (END)</button>
+            <button class="btn" style="background:none; color:#666; margin-top:20px" onclick="app.closeOverlay()">ОТМЕНА</button>
         </div>
     </div>
 
+    <!-- Разделы БАЗА и ШТАТ остаются такими же по структуре, но с исправленным JS -->
     <div id="scr-base" class="screen">
-        <div class="header"><h2>ОТЧЕТНОСТЬ</h2> <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button></div>
+        <div class="header" style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between">
+            <h2>ОТЧЕТЫ</h2>
+            <button onclick="app.download()" style="background:none; border:none; color:var(--p)">СКАЧАТЬ .TXT</button>
+        </div>
         <div class="scroll">
             <div class="m-ctrl">
                 <button class="m-btn" onclick="app.changeMonth(-1)">←</button>
@@ -78,13 +83,13 @@
     </div>
 
     <div id="scr-staff" class="screen">
-        <div class="header"><h2>ШТАТ</h2></div>
+        <div class="header" style="padding:20px; border-bottom:1px solid #222"><h2>ШТАТ</h2></div>
         <div class="scroll">
             <div class="card">
                 <input type="text" id="reg-n" placeholder="Имя сотрудника">
                 <input type="number" id="reg-rate" placeholder="Ставка в час">
                 <input type="file" id="reg-f" accept="image/*" capture="user">
-                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ</button>
+                <button class="btn btn-p" onclick="app.reg()">СОЗДАТЬ ПРОФИЛЬ</button>
             </div>
             <div id="staff-list"></div>
         </div>
@@ -100,70 +105,82 @@
 let db;
 let viewDate = new Date();
 let curU = null;
-let modelsLoaded = false;
+let modelsReady = false;
 
 const app = {
     async init() {
-        const req = indexedDB.open("BioID_Final_v86", 1);
+        const req = indexedDB.open("BioID_Final_v87", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
             d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
         };
-        req.onsuccess = e => { db = e.target.result; this.loadModels(); };
+        req.onsuccess = e => { 
+            db = e.target.result; 
+            this.loadModels(); 
+        };
     },
 
     async loadModels() {
         const p = './models';
         try {
-            await faceapi.nets.tinyFaceDetector.loadFromUri(p);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(p);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(p);
-            modelsLoaded = true;
-            document.getElementById('st-text').innerText = "МОДЕЛИ ГОТОВЫ. ВКЛЮЧИТЕ КАМЕРУ.";
-        } catch(e) { 
-            document.getElementById('st-text').innerText = "ОШИБКА СЕТИ (МОДЕЛИ)"; 
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(p),
+                faceapi.nets.faceLandmark68Net.loadFromUri(p),
+                faceapi.nets.faceRecognitionNet.loadFromUri(p)
+            ]);
+            modelsReady = true;
+            document.getElementById('st-text').innerText = "МОДЕЛИ ЗАГРУЖЕНЫ";
+        } catch(e) {
+            document.getElementById('st-text').innerText = "ОШИБКА ЗАГРУЗКИ МОДЕЛЕЙ";
         }
     },
 
     async startCamera() {
         const v = document.getElementById('video');
         const btn = document.getElementById('cam-btn');
+        
+        // Сначала пытаемся запустить камеру без лишних проверок
         try {
-            const s = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: "user",
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 } 
             });
-            v.srcObject = s;
+            v.srcObject = stream;
             btn.style.display = 'none';
-            document.getElementById('st-text').innerText = "СКАНЕР АКТИВЕН";
-            this.loop();
-        } catch(e) {
-            alert("Нет доступа к камере! Проверьте настройки или используйте HTTPS.");
+            document.getElementById('st-text').innerText = "ПОИСК ЛИЦА...";
+            this.runScanner();
+        } catch(err) {
+            console.error(err);
+            alert("Камера заблокирована. Проверьте HTTPS или настройки разрешений.");
         }
     },
 
-    loop() {
+    runScanner() {
         setInterval(async () => {
-            if(curU || !modelsLoaded || !document.getElementById('scr-scan').classList.contains('active')) return;
+            if(curU || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
+            
             const v = document.getElementById('video');
             const ws = await this.get("workers");
+            if(!ws.length) return;
+
             const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-            if(det && ws.length) {
+            
+            if(det) {
                 for(let w of ws) {
                     const dist = faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc));
                     if(dist < 0.45) {
                         curU = w;
                         document.getElementById('u-name').innerText = w.name;
-                        document.getElementById('overlay').style.display = 'block';
+                        document.getElementById('overlay').style.display = 'flex';
                         break;
                     }
                 }
             }
-        }, 1000);
+        }, 800); // Чуть быстрее интервал для отзывчивости
     },
 
     ui(id, el) {
@@ -184,21 +201,31 @@ const app = {
         this.closeOverlay();
     },
 
-    closeOverlay() { curU = null; document.getElementById('overlay').style.display = 'none'; },
+    closeOverlay() { 
+        curU = null; 
+        document.getElementById('overlay').style.display = 'none'; 
+    },
 
     async reg() {
-        const n = document.getElementById('reg-n').value, r = document.getElementById('reg-rate').value, f = document.getElementById('reg-f').files[0];
-        if(!n || !f || !r) return alert("Заполните данные!");
+        const n = document.getElementById('reg-n').value, 
+              r = document.getElementById('reg-rate').value, 
+              f = document.getElementById('reg-f').files[0];
+        if(!n || !f || !r) return alert("Заполните всё!");
+        
         const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        
         if(det) {
             const rd = new FileReader(); rd.readAsDataURL(f);
             rd.onload = () => {
-                db.transaction("workers", "readwrite").objectStore("workers").put({
+                const tx = db.transaction("workers", "readwrite");
+                tx.objectStore("workers").put({
                     name: n, rate: parseFloat(r), desc: Array.from(det.descriptor), pic: rd.result
                 });
-                alert("Сотрудник добавлен"); this.renderS();
+                alert("Успех!"); this.renderS();
             };
+        } else {
+            alert("Лицо на фото не найдено!");
         }
     },
 
@@ -206,8 +233,8 @@ const app = {
         const ws = await this.get("workers");
         document.getElementById('staff-list').innerHTML = ws.map(w => `
             <div class="card" style="display:flex; justify-content:space-between; align-items:center">
-                <div><b>${w.name}</b><br><small style="color:var(--p)">${w.rate}/ч</small></div>
-                <button class="btn" style="width:auto; color:var(--red); padding:5px; margin:0; background:none" onclick="app.delS('${w.name}')">УДАЛИТЬ</button>
+                <div><b>${w.name}</b><br><small>${w.rate} за час</small></div>
+                <button onclick="app.delS('${w.name}')" style="background:none; border:none; color:var(--red)">УДАЛИТЬ</button>
             </div>
         `).join('');
     },
@@ -230,8 +257,7 @@ const app = {
                 const dl = ls.filter(l => l.name === w.name && l.date === ds);
                 const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
                 if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
-                let st = dl.length ? (cout ? 'green' : 'yellow') : '';
-                if(dl.some(l => l.type==='ABSENT')) st = 'red';
+                let st = dl.length ? (cout ? 'green' : 'yellow') : (dl.some(l => l.type==='ABSENT') ? 'red' : '');
                 dH += `<div class="day ${st}" onclick="app.edit('${w.name}','${ds}')">${i}</div>`;
             }
             return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)}</span><div class="cal-row">${dH}</div></div>`;
@@ -239,11 +265,13 @@ const app = {
     },
 
     async edit(n, d) {
-        const s = prompt("1: Был (8ч), 2: Прогул, 3: ОЧИСТИТЬ");
+        const s = prompt("1: Был (8ч), 2: Прогул, 3: Очистить");
         if(!s) return;
-        const all = await this.get("logs");
         const tx = db.transaction("logs", "readwrite");
-        all.filter(l => l.name === n && l.date === d).forEach(l => tx.objectStore("logs").delete(l.id));
+        const store = tx.objectStore("logs");
+        const all = await this.get("logs");
+        all.filter(l => l.name === n && l.date === d).forEach(l => store.delete(l.id));
+        
         tx.oncomplete = () => {
             if(s==='1') {
                 const tx2 = db.transaction("logs", "readwrite");
@@ -261,19 +289,20 @@ const app = {
     async download() {
         const ws = await this.get("workers");
         const ls = await this.get("logs");
-        let t = `REPORT ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
+        let t = `ОТЧЕТ ЗА ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
         ws.forEach(w => {
             let h = 0;
-            const wl = ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === viewDate.getMonth());
-            const days = [...new Set(wl.map(l => l.date))];
-            days.forEach(d => {
-                const dayL = wl.filter(l => l.date === d);
-                const cin = dayL.find(l => l.type === 'IN'), cout = dayL.find(l => l.type === 'OUT');
-                if(cin && cout) h += (cout.ts - cin.ts) / 3600000;
+            ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === viewDate.getMonth()).forEach((l, i, arr) => {
+                if(l.type === 'IN') {
+                    const out = arr.find(o => o.date === l.date && o.type === 'OUT');
+                    if(out) h += (out.ts - l.ts) / 3600000;
+                }
             });
-            t += `${w.name}: ${h.toFixed(1)}ч | ЗП: ${(h * w.rate).toFixed(2)}\n`;
+            t += `${w.name}: ${h.toFixed(1)}ч | Итого: ${(h * w.rate).toFixed(0)}\n`;
         });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t])); a.download = `report.txt`; a.click();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([t], {type:"text/plain"}));
+        a.download = "report.txt"; a.click();
     },
 
     get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
