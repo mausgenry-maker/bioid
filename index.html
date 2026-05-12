@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Ultimate APK</title>
+    <title>BioID Fix Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
@@ -19,16 +19,11 @@
         .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
         .video-box { width: 100%; height: 60vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
         
-        #cam-btn { 
-            position: absolute; z-index: 99; padding: 20px 40px; 
-            background: var(--p); color: #000; border: none; 
-            border-radius: 50px; font-weight: 900; font-size: 16px;
-            box-shadow: 0 0 30px rgba(0,255,136,0.5); 
-        }
+        #cam-btn { position: absolute; z-index: 99; padding: 20px 40px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: 900; }
 
-        .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
+        .scroll { flex: 1; overflow-y: auto; padding: 15px; }
         .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; }
 
         .m-ctrl { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 12px; margin-bottom: 15px; padding: 5px; }
@@ -36,75 +31,65 @@
 
         .cal-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
         .day { min-width: 40px; height: 40px; border-radius: 10px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-        .day.green { background: var(--p); color: #000; }
-        .day.red { background: var(--red); color: #fff; }
-        .day.yellow { background: var(--yellow); color: #000; }
+        .day.green { background: var(--p); color: #000; font-weight: bold; }
+        .day.red { background: var(--red); color: #fff; font-weight: bold; }
+        .day.yellow { background: var(--yellow); color: #000; font-weight: bold; }
 
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
-
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 25px; }
         .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-bottom: 10px; }
-        .btn-p { background: var(--p); color: #000; }
-        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div id="scr-scan" class="screen active">
         <div class="video-box">
-            <button id="cam-btn">ЗАПУСТИТЬ КАМЕРУ</button>
+            <button id="cam-btn">СТАРТ КАМЕРЫ</button>
             <video id="video" autoplay playsinline muted></video>
         </div>
-        <div class="scroll">
-            <h3 id="st-text" style="text-align:center; color:var(--p); opacity: 0.8">ОЖИДАНИЕ ИНИЦИАЛИЗАЦИИ...</h3>
-            <p id="debug-info" style="font-size:10px; color:#555; text-align:center; margin-top:10px"></p>
-        </div>
-    </div>
-
-    <div id="overlay">
-        <h1 id="u-name" style="font-size: 28px; margin-bottom: 5px; text-align: center;">---</h1>
-        <p id="u-date" style="color: #666; margin-bottom: 25px; font-size: 14px;"></p>
-        
-        <div id="scanner-controls" style="width: 100%;">
-            <button class="btn btn-p" onclick="app.log('IN')">ВХОД (ЖЕЛТЫЙ)</button>
-            <button class="btn" style="background:var(--red); color:#fff;" onclick="app.log('OUT')">ВЫХОД (ЗЕЛЕНЫЙ)</button>
-        </div>
-
-        <div id="manual-controls" style="width: 100%; display: none;">
-            <button class="btn btn-p" onclick="app.setLogType('WORK')">РАБОТАЛ (8ч)</button>
-            <button class="btn" style="background:var(--yellow); color:#000;" onclick="app.setLogType('IN_ONLY')">ТОЛЬКО ВХОД</button>
-            <button class="btn" style="background:var(--red); color:#fff;" onclick="app.setLogType('ABSENT')">ПРОГУЛ</button>
-            <button class="btn" style="background:#444; color:#fff;" onclick="app.setLogType('CLEAR')">ОЧИСТИТЬ</button>
-        </div>
-
-        <button class="btn" style="background:none; color:#666; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
+        <div class="scroll"><h3 id="st-text" style="text-align:center; color:var(--p)">ЖДИТЕ...</h3></div>
     </div>
 
     <div id="scr-base" class="screen">
-        <div class="header" style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center">
-            <h2>ЖУРНАЛ</h2>
-            <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button>
-        </div>
+        <div class="header" style="padding:20px; display:flex; justify-content:space-between"><h2>ЖУРНАЛ</h2><button onclick="app.download()">ОТЧЕТ</button></div>
         <div class="scroll">
             <div class="m-ctrl">
-                <button class="m-btn" onclick="app.changeMonth(-1)">←</button>
+                <button onclick="app.changeMonth(-1)">←</button>
                 <b id="cur-m-name">---</b>
-                <button class="m-btn" onclick="app.changeMonth(1)">→</button>
+                <button onclick="app.changeMonth(1)">→</button>
             </div>
             <div id="base-list"></div>
         </div>
     </div>
 
     <div id="scr-staff" class="screen">
-        <div class="header" style="padding:20px; border-bottom:1px solid #222"><h2>ШТАТ</h2></div>
         <div class="scroll">
             <div class="card">
-                <input type="text" id="reg-n" placeholder="Имя Фамилия">
-                <input type="number" id="reg-rate" placeholder="Ставка в час">
+                <input type="text" id="reg-n" placeholder="Имя" style="width:100%; padding:10px; margin-bottom:10px">
+                <input type="number" id="reg-r" placeholder="Ставка" style="width:100%; padding:10px; margin-bottom:10px">
                 <input type="file" id="reg-f" accept="image/*" capture="user">
-                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ В БАЗУ</button>
+                <button onclick="app.reg()" style="width:100%; padding:15px; background:var(--p); border:none; margin-top:10px">ДОБАВИТЬ</button>
             </div>
             <div id="staff-list"></div>
         </div>
+    </div>
+
+    <div id="overlay">
+        <h1 id="u-name">---</h1>
+        <p id="u-date" style="color:#666; margin-bottom:20px"></p>
+        
+        <div id="box-scan" style="width:100%">
+            <button class="btn" style="background:var(--yellow)" onclick="app.fastLog('IN')">ВХОД</button>
+            <button class="btn" style="background:var(--p)" onclick="app.fastLog('OUT')">ВЫХОД</button>
+        </div>
+
+        <div id="box-manual" style="width:100%; display:none">
+            <button class="btn" style="background:var(--p)" onclick="app.setDay('WORK')">РАБОТАЛ (8ч)</button>
+            <button class="btn" style="background:var(--yellow)" onclick="app.setDay('IN')">ТОЛЬКО ВХОД</button>
+            <button class="btn" style="background:var(--red)" onclick="app.setDay('ABSENT')">ПРОГУЛ</button>
+            <button class="btn" style="background:#444; color:#fff" onclick="app.setDay('CLEAR')">ОЧИСТИТЬ</button>
+        </div>
+        
+        <button onclick="app.closeOverlay()" style="background:none; border:none; color:#666; margin-top:15px">ОТМЕНА</button>
     </div>
 
     <div class="nav">
@@ -114,12 +99,11 @@
     </div>
 
 <script>
-let db, viewDate = new Date(), curU = null, modelsReady = false, editTarget = null;
+let db, viewDate = new Date(), curU = null, modelsReady = false, scanPaused = false;
 
 const app = {
     async init() {
-        document.getElementById('debug-info').innerText = `Secure: ${window.isSecureContext} | Agent: ${navigator.userAgent.slice(0,40)}`;
-        const req = indexedDB.open("BioID_Corp_v88", 1);
+        const req = indexedDB.open("BioID_Corp_v90", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
@@ -130,34 +114,33 @@ const app = {
     },
 
     async loadModels() {
-        const p = './models';
+        const p = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
         try {
             await faceapi.nets.tinyFaceDetector.loadFromUri(p);
             await faceapi.nets.faceLandmark68Net.loadFromUri(p);
             await faceapi.nets.faceRecognitionNet.loadFromUri(p);
             modelsReady = true;
-            document.getElementById('st-text').innerText = "ГОТОВО К ЗАПУСКУ";
-        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА МОДЕЛЕЙ"; }
+            document.getElementById('st-text').innerText = "ГОТОВО";
+        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА"; }
     },
 
     async startCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 480 } });
-            document.getElementById('video').srcObject = stream;
-            document.getElementById('cam-btn').style.display = 'none';
-            this.runScanner();
-        } catch(err) { alert("Ошибка камеры"); }
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('cam-btn').style.display = 'none';
+        this.runScanner();
     },
 
     runScanner() {
         setInterval(async () => {
-            if(curU || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
+            if(scanPaused || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
             const det = await faceapi.detectSingleFace(document.getElementById('video'), new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if(det) {
                 const ws = await this.get("workers");
                 for(let w of ws) {
                     if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.45) {
-                        this.showOverlay(w, new Date().toISOString().split('T')[0], 'SCAN');
+                        this.openModal(w, new Date().toISOString().split('T')[0], 'SCAN');
+                        scanPaused = true; 
                         break;
                     }
                 }
@@ -165,85 +148,70 @@ const app = {
         }, 1000);
     },
 
-    showOverlay(worker, date, mode) {
-        curU = worker;
-        editTarget = { name: worker.name, date: date };
+    openModal(worker, date, mode) {
+        curU = { ...worker, targetDate: date };
         document.getElementById('u-name').innerText = worker.name;
         document.getElementById('u-date').innerText = date;
-        document.getElementById('scanner-controls').style.display = (mode === 'SCAN') ? 'block' : 'none';
-        document.getElementById('manual-controls').style.display = (mode === 'MANUAL') ? 'block' : 'none';
+        document.getElementById('box-scan').style.display = (mode === 'SCAN' ? 'block' : 'none');
+        document.getElementById('box-manual').style.display = (mode === 'MANUAL' ? 'block' : 'none');
         document.getElementById('overlay').style.display = 'flex';
     },
 
-    async log(t) {
+    // Логика из камеры
+    async fastLog(type) {
+        await this.clearDayLogs(curU.name, curU.targetDate);
         const tx = db.transaction("logs", "readwrite");
-        tx.objectStore("logs").add({ name: curU.name, date: editTarget.date, type: t, ts: Date.now() });
+        const store = tx.objectStore("logs");
+        if(type === 'IN') store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
+        if(type === 'OUT') {
+            store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() - 28800000 });
+            store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() });
+        }
         this.closeOverlay();
     },
 
-    async setLogType(mode) {
-        const tx = db.transaction("logs", "readwrite");
-        const store = tx.objectStore("logs");
-        const all = await this.get("logs");
-        
-        // Сначала чистим старое за этот день
-        all.filter(l => l.name === editTarget.name && l.date === editTarget.date).forEach(l => store.delete(l.id));
-
-        tx.oncomplete = () => {
-            if (mode === 'CLEAR') { this.renderB(); this.closeOverlay(); return; }
-            
-            const tx2 = db.transaction("logs", "readwrite");
-            const s2 = tx2.objectStore("logs");
+    // Логика из календаря
+    async setDay(mode) {
+        await this.clearDayLogs(curU.name, curU.targetDate);
+        if(mode !== 'CLEAR') {
+            const tx = db.transaction("logs", "readwrite");
+            const store = tx.objectStore("logs");
             if(mode === 'WORK') {
-                s2.add({name: editTarget.name, date: editTarget.date, type: 'IN', ts: Date.now()});
-                s2.add({name: editTarget.name, date: editTarget.date, type: 'OUT', ts: Date.now() + 28800000});
-            } else if(mode === 'IN_ONLY') {
-                s2.add({name: editTarget.name, date: editTarget.date, type: 'IN', ts: Date.now()});
+                store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
+                store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() + 28800000 });
+            } else if(mode === 'IN') {
+                store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
             } else if(mode === 'ABSENT') {
-                s2.add({name: editTarget.name, date: editTarget.date, type: 'ABSENT'});
+                store.add({ name: curU.name, date: curU.targetDate, type: 'ABSENT' });
             }
-            tx2.oncomplete = () => { this.renderB(); this.closeOverlay(); };
-        };
+        }
+        this.renderB();
+        this.closeOverlay();
     },
 
-    closeOverlay() { curU = null; editTarget = null; document.getElementById('overlay').style.display = 'none'; },
+    async clearDayLogs(name, date) {
+        const logs = await this.get("logs");
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
+        logs.filter(l => l.name === name && l.date === date).forEach(l => store.delete(l.id));
+        return new Promise(r => tx.oncomplete = r);
+    },
 
-    ui(id, el) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(el) el.classList.add('active');
-        if(id === 'scr-base') this.renderB();
-        if(id === 'scr-staff') this.renderS();
+    closeOverlay() { 
+        curU = null; 
+        document.getElementById('overlay').style.display = 'none'; 
+        setTimeout(() => { scanPaused = false; }, 5000); // Пауза сканера на 5 сек после закрытия
     },
 
     async reg() {
-        const n = document.getElementById('reg-n').value, r = document.getElementById('reg-rate').value, f = document.getElementById('reg-f').files[0];
-        if(!n || !f || !r) return alert("Заполните всё!");
+        const n = document.getElementById('reg-n').value, r = document.getElementById('reg-r').value, f = document.getElementById('reg-f').files[0];
         const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
         if(det) {
-            const rd = new FileReader(); rd.readAsDataURL(f);
-            rd.onload = () => {
-                db.transaction("workers", "readwrite").objectStore("workers").put({
-                    name: n, rate: parseFloat(r), desc: Array.from(det.descriptor), pic: rd.result
-                });
-                alert("Добавлен!"); this.renderS();
-            };
-        } else alert("Лицо не обнаружено!");
+            db.transaction("workers", "readwrite").objectStore("workers").put({ name: n, rate: parseFloat(r), desc: Array.from(det.descriptor) });
+            alert("ОК"); this.renderS();
+        }
     },
-
-    async renderS() {
-        const ws = await this.get("workers");
-        document.getElementById('staff-list').innerHTML = ws.map(w => `
-            <div class="card" style="display:flex; justify-content:space-between; align-items:center">
-                <div><b>${w.name}</b><br><small>${w.rate}/час</small></div>
-                <button onclick="app.delS('${w.name}')" style="background:none; border:none; color:var(--red); font-weight:bold">УДАЛИТЬ</button>
-            </div>`).join('');
-    },
-
-    async delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
-    changeMonth(dir) { viewDate.setMonth(viewDate.getMonth() + dir); this.renderB(); },
 
     async renderB() {
         const mNames = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
@@ -252,43 +220,35 @@ const app = {
         const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
         document.getElementById('base-list').innerHTML = ws.map(w => {
-            let dH = '', totalH = 0;
+            let daysHtml = '', totalH = 0;
             for(let i=1; i<=dim; i++) {
                 const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                 const dl = ls.filter(l => l.name === w.name && l.date === ds);
                 const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT'), abs = dl.find(l => l.type === 'ABSENT');
                 if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
                 let st = abs ? 'red' : (cout ? 'green' : (cin ? 'yellow' : ''));
-                dH += `<div class="day ${st}" onclick="app.editManual('${w.name}','${ds}')">${i}</div>`;
+                daysHtml += `<div class="day ${st}" onclick="app.openModal({name:'${w.name}'}, '${ds}', 'MANUAL')">${i}</div>`;
             }
-            return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)}</span><div class="cal-row">${dH}</div></div>`;
+            return `<div class="card"><b>${w.name}</b> <span style="float:right">${(totalH * w.rate).toFixed(0)} ₽</span><div class="cal-row">${daysHtml}</div></div>`;
         }).join('');
     },
 
-    async editManual(n, d) {
+    async renderS() {
         const ws = await this.get("workers");
-        const worker = ws.find(w => w.name === n);
-        this.showOverlay(worker, d, 'MANUAL');
+        document.getElementById('staff-list').innerHTML = ws.map(w => `<div class="card">${w.name} <button onclick="app.delS('${w.name}')" style="float:right">УДАЛИТЬ</button></div>`).join('');
     },
 
-    async download() {
-        const ws = await this.get("workers"), ls = await this.get("logs");
-        let t = `ОТЧЕТ ЗА ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
-        ws.forEach(w => {
-            let h = 0;
-            const wl = ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === viewDate.getMonth());
-            [...new Set(wl.map(l => l.date))].forEach(d => {
-                const dayL = wl.filter(l => l.date === d);
-                const cin = dayL.find(l => l.type === 'IN'), cout = dayL.find(l => l.type === 'OUT');
-                if(cin && cout) h += (cout.ts - cin.ts) / 3600000;
-            });
-            t += `${w.name}: ${h.toFixed(1)}ч | Итого: ${(h * w.rate).toFixed(0)}\n`;
-        });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([t])); a.download = "report.txt"; a.click();
-    },
-
-    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
+    async delS(n) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); },
+    changeMonth(dir) { viewDate.setMonth(viewDate.getMonth() + dir); this.renderB(); },
+    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); },
+    ui(id, el) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'scr-base') this.renderB();
+        if(id === 'scr-staff') this.renderS();
+    }
 };
 window.onload = () => app.init();
 </script>
