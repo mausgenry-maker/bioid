@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Ultimate Fix</title>
+    <title>BioID Fix</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
@@ -19,9 +19,9 @@
         .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
         .video-box { width: 100%; height: 60vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
         
-        #cam-btn { position: absolute; z-index: 99; padding: 20px 40px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: 900; font-size: 16px; box-shadow: 0 0 30px rgba(0,255,136,0.5); }
+        #cam-btn { position: absolute; z-index: 99; padding: 20px 40px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: 900; }
 
         .scroll { flex: 1; overflow-y: auto; padding: 15px; }
         .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; }
@@ -42,23 +42,23 @@
         .btn-p { background: var(--p); color: #000; }
         .btn-r { background: var(--red); color: #fff; }
         .btn-g { background: #444; color: #fff; }
-        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; font-size: 16px; }
+        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="scr-scan" class="screen active">
         <div class="video-box">
-            <button id="cam-btn">ЗАПУСТИТЬ КАМЕРУ</button>
+            <button id="cam-btn">ВКЛЮЧИТЬ КАМЕРУ</button>
             <video id="video" autoplay playsinline muted></video>
         </div>
-        <div class="scroll"><h3 id="st-text" style="text-align:center; color:var(--p)">ОЖИДАНИЕ...</h3></div>
+        <div class="scroll"><h3 id="st-text" style="text-align:center; color:var(--p)">ЖДИТЕ...</h3></div>
     </div>
 
     <div id="scr-base" class="screen">
-        <div class="header" style="padding:20px; display:flex; justify-content:space-between; align-items:center">
+        <div class="header" style="padding:20px; display:flex; justify-content:space-between">
             <h2>ЖУРНАЛ</h2>
-            <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button>
+            <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ</button>
         </div>
         <div class="scroll">
             <div class="m-ctrl">
@@ -71,29 +71,28 @@
     </div>
 
     <div id="scr-staff" class="screen">
-        <div class="header" style="padding:20px;"><h2>ШТАТ</h2></div>
         <div class="scroll">
             <div class="card">
-                <input type="text" id="reg-n" placeholder="Имя Фамилия">
-                <input type="number" id="reg-rate" placeholder="Ставка в час">
+                <input type="text" id="reg-n" placeholder="Имя">
+                <input type="number" id="reg-rate" placeholder="Ставка/час">
                 <input type="file" id="reg-f" accept="image/*" capture="user">
-                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ В БАЗУ</button>
+                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ</button>
             </div>
             <div id="staff-list"></div>
         </div>
     </div>
 
     <div id="overlay">
-        <h1 id="u-name" style="font-size: 28px; margin-bottom: 5px;">---</h1>
-        <p id="u-date" style="color: #666; margin-bottom: 25px;"></p>
+        <h1 id="u-name">---</h1>
+        <p id="u-date" style="color:#666; margin-bottom:20px"></p>
         
         <button class="btn btn-y" onclick="app.log('IN')">ВХОД</button>
         <button class="btn btn-p" onclick="app.log('OUT')">ВЫХОД</button>
         
-        <button class="btn btn-r" id="opt-absent" style="display:none" onclick="app.log('ABSENT')">ПРОГУЛ</button>
-        <button class="btn btn-g" id="opt-reset" style="display:none" onclick="app.log('RESET')">ОЧИСТИТЬ</button>
+        <button class="btn btn-r" id="btn-abs" style="display:none" onclick="app.log('ABSENT')">ПРОГУЛ</button>
+        <button class="btn btn-g" id="btn-res" style="display:none" onclick="app.log('RESET')">ОЧИСТИТЬ</button>
         
-        <button class="btn" style="background:none; color:#666; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
+        <button onclick="app.closeOverlay()" style="background:none; border:none; color:#666; margin-top:10px">ОТМЕНА</button>
     </div>
 
     <div class="nav">
@@ -107,7 +106,7 @@ let db, viewDate = new Date(), curU = null, modelsReady = false;
 
 const app = {
     async init() {
-        const req = indexedDB.open("BioID_Corp_v100", 1);
+        const req = indexedDB.open("BioID_Final_DB", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
@@ -124,8 +123,8 @@ const app = {
             await faceapi.nets.faceLandmark68Net.loadFromUri(p);
             await faceapi.nets.faceRecognitionNet.loadFromUri(p);
             modelsReady = true;
-            document.getElementById('st-text').innerText = "ГОТОВО";
-        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА"; }
+            document.getElementById('st-text').innerText = "ГОТОВО К СКАНИРОВАНИЮ";
+        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА СЕТИ"; }
     },
 
     async startCamera() {
@@ -134,7 +133,7 @@ const app = {
             document.getElementById('video').srcObject = stream;
             document.getElementById('cam-btn').style.display = 'none';
             this.runScanner();
-        } catch(err) { alert("Нет камеры"); }
+        } catch(err) { alert("Камера не найдена"); }
     },
 
     runScanner() {
@@ -145,7 +144,7 @@ const app = {
                 const ws = await this.get("workers");
                 for(let w of ws) {
                     if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.45) {
-                        this.openModal(w, new Date().toISOString().split('T')[0], false); // false = только 2 кнопки
+                        this.openModal(w, new Date().toISOString().split('T')[0], false); // ВАЖНО: false = 2 кнопки
                         break;
                     }
                 }
@@ -153,14 +152,16 @@ const app = {
         }, 1000);
     },
 
-    // Универсальное окно: full = true (4 кнопки), false (2 кнопки)
-    async openModal(worker, date, full) {
+    // Логика переключения кнопок (2 или 4)
+    openModal(worker, date, isManual) {
         curU = { ...worker, targetDate: date };
         document.getElementById('u-name').innerText = worker.name;
         document.getElementById('u-date').innerText = date;
         
-        document.getElementById('opt-absent').style.display = full ? 'block' : 'none';
-        document.getElementById('opt-reset').style.display = full ? 'block' : 'none';
+        // Если нажали в календаре (isManual = true) -> показываем 4 кнопки, иначе 2
+        document.getElementById('btn-abs').style.display = isManual ? 'block' : 'none';
+        document.getElementById('btn-res').style.display = isManual ? 'block' : 'none';
+        
         document.getElementById('overlay').style.display = 'flex';
     },
 
@@ -169,18 +170,19 @@ const app = {
         const store = tx.objectStore("logs");
         const all = await this.get("logs");
         
-        // Удаляем старое за этот день
+        // Очистка старых записей за этот день
         all.filter(l => l.name === curU.name && l.date === curU.targetDate).forEach(l => store.delete(l.id));
 
         if(type === 'IN') {
             store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
         } else if(type === 'OUT') {
-            // Чтобы считались деньги, при Выходе добавляем фиктивный Вход на 8ч раньше, если его нет
+            // Для "Зеленого" статуса (Выход) создаем и вход и выход, чтобы считалась зп
             store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() - 28800000 });
             store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() });
         } else if(type === 'ABSENT') {
             store.add({ name: curU.name, date: curU.targetDate, type: 'ABSENT' });
         }
+        // RESET просто оставляет базу пустой
 
         tx.oncomplete = () => { this.closeOverlay(); this.renderB(); };
     },
@@ -189,15 +191,13 @@ const app = {
 
     async reg() {
         const n = document.getElementById('reg-n').value, r = document.getElementById('reg-rate').value, f = document.getElementById('reg-f').files[0];
-        if(!n || !f || !r) return alert("Заполни поля");
+        if(!n || !f) return alert("Данные!");
         const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
         if(det) {
-            db.transaction("workers", "readwrite").objectStore("workers").put({
-                name: n, rate: parseFloat(r), desc: Array.from(det.descriptor)
-            });
-            alert("Готово"); this.renderS();
-        } else alert("Лицо не найдено");
+            db.transaction("workers", "readwrite").objectStore("workers").put({ name: n, rate: parseFloat(r), desc: Array.from(det.descriptor) });
+            alert("ОК"); this.renderS();
+        } else alert("Нет лица");
     },
 
     async renderB() {
@@ -207,20 +207,20 @@ const app = {
         const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
         document.getElementById('base-list').innerHTML = ws.map(w => {
-            let dH = '', totalH = 0;
+            let daysHtml = '', totalH = 0;
             for(let i=1; i<=dim; i++) {
                 const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                 const dl = ls.filter(l => l.name === w.name && l.date === ds);
                 const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT'), abs = dl.find(l => l.type === 'ABSENT');
                 if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
                 let st = abs ? 'red' : (cout ? 'green' : (cin ? 'yellow' : ''));
-                dH += `<div class="day ${st}" onclick="app.editDay('${w.name}','${ds}')">${i}</div>`;
+                daysHtml += `<div class="day ${st}" onclick="app.manualEdit('${w.name}','${ds}')">${i}</div>`;
             }
-            return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)} ₽</span><div class="cal-row">${dH}</div></div>`;
+            return `<div class="card"><b>${w.name}</b> <span style="float:right">${(totalH * w.rate).toFixed(0)} ₽</span><div class="cal-row">${daysHtml}</div></div>`;
         }).join('');
     },
 
-    async editDay(name, date) {
+    async manualEdit(name, date) {
         const ws = await this.get("workers");
         const worker = ws.find(w => w.name === name);
         this.openModal(worker, date, true); // true = выбор из 4 кнопок
@@ -228,7 +228,7 @@ const app = {
 
     async renderS() {
         const ws = await this.get("workers");
-        document.getElementById('staff-list').innerHTML = ws.map(w => `<div class="card" style="display:flex; justify-content:space-between"><div><b>${w.name}</b><br>${w.rate}₽/час</div><button onclick="app.delS('${w.name}')" style="color:var(--red); background:none; border:none">УДАЛИТЬ</button></div>`).join('');
+        document.getElementById('staff-list').innerHTML = ws.map(w => `<div class="card" style="display:flex; justify-content:space-between"><b>${w.name}</b><button onclick="app.delS('${w.name}')" style="color:var(--red); background:none; border:none">УДАЛИТЬ</button></div>`).join('');
     },
 
     async delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
@@ -244,18 +244,17 @@ const app = {
     },
     async download() {
         const ws = await this.get("workers"), ls = await this.get("logs");
-        let t = `ОТЧЕТ ЗА ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
+        let t = `ОТЧЕТ ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
         ws.forEach(w => {
             let h = 0;
-            const wl = ls.filter(l => l.name === w.name && new Date(l.date).getMonth() === viewDate.getMonth());
-            [...new Set(wl.map(l => l.date))].forEach(d => {
-                const dayL = wl.filter(l => l.date === d);
-                const cin = dayL.find(l => l.type === 'IN'), cout = dayL.find(l => l.type === 'OUT');
-                if(cin && cout) h += (cout.ts - cin.ts) / 3600000;
+            ls.filter(l => l.name === w.name).forEach(log => {
+                const dLogs = ls.filter(x => x.name === w.name && x.date === log.date);
+                const i = dLogs.find(x => x.type === 'IN'), o = dLogs.find(x => x.type === 'OUT');
+                if(i && o && log.type === 'OUT') h += (o.ts - i.ts) / 3600000;
             });
-            t += `${w.name}: ${h.toFixed(1)}ч | ${(h * w.rate).toFixed(0)} ₽\n`;
+            t += `${w.name}: ${h.toFixed(1)}ч | ${(h * w.rate).toFixed(0)}р\n`;
         });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t])); a.download = "report.txt"; a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t])); a.download = "bio_report.txt"; a.click();
     }
 };
 window.onload = () => app.init();
