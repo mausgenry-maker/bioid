@@ -1,167 +1,95 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Ultimate Fix</title>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <style>
-        :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: #fff; font-family: -apple-system, system-ui, sans-serif; height: 100vh; overflow: hidden; }
+// ... (начало кода остается прежним)
 
-        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; padding-bottom: 90px; z-index: 10; }
-        .screen.active { display: flex; }
+    // 1. ИСПРАВЛЕННАЯ ЛОГИКА СОХРАНЕНИЯ
+    async setLog(action) {
+        const { name, date } = editCtx;
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
         
-        .nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0a; display: flex; border-top: 1px solid #222; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; cursor: pointer; }
-        .nav-item.active { color: var(--p); }
-
-        .video-box { width: 100%; height: 55vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #video { width: 100%; height: 100%; object-fit: cover; }
+        // Сначала получаем все логи, чтобы найти ID для удаления
+        const all = await this.get("logs");
+        const toDelete = all.filter(l => l.name === name && l.date === date);
         
-        #cam-btn { 
-            position: absolute; z-index: 99; padding: 20px 40px; 
-            background: var(--p); color: #000; border: none; 
-            border-radius: 50px; font-weight: 900;
+        for (let l of toDelete) {
+            store.delete(l.id);
         }
 
-        .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
-        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; position: relative; }
-
-        .cal-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
-        .day { 
-            min-width: 44px; height: 44px; border-radius: 12px; background: var(--grey); 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 14px; flex-shrink: 0; cursor: pointer; 
-            border: 1px solid transparent;
+        // Добавляем новые записи
+        if (action === 'YELLOW') {
+            store.add({ name, date, type: 'IN', ts: Date.now() });
+        } else if (action === 'GREEN') {
+            store.add({ name, date, type: 'IN', ts: Date.now() });
+            store.add({ name, date, type: 'OUT', ts: Date.now() + 1 }); // +1мс для порядка
+        } else if (action === 'RED') {
+            store.add({ name, date, type: 'ABSENT' });
         }
-        .day.green { background: var(--p); color: #000; }
-        .day.red { background: var(--red); color: #fff; }
-        .day.yellow { background: var(--yellow); color: #000; }
+        // Если CLEAR — просто ничего не добавляем
 
-        /* ОВЕРЛЕИ — Важно: display: none по умолчанию */
-        #overlay, #edit-modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.95); z-index: 5000; 
-            display: none; align-items: center; justify-content: center; 
-            flex-direction: column; padding: 30px;
-        }
-
-        .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-bottom: 12px; transition: transform 0.1s; }
-        .btn:active { transform: scale(0.96); }
-        .btn-p { background: var(--p); color: #000; }
-        
-        .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
-    </style>
-</head>
-<body>
-
-    <div id="scr-scan" class="screen active">
-        <div class="video-box">
-            <button id="cam-btn">ЗАПУСТИТЬ КАМЕРУ</button>
-            <video id="video" autoplay playsinline muted></video>
-        </div>
-        <div class="scroll">
-            <h3 id="st-text" style="text-align:center; color:var(--p); opacity: 0.8">ГОТОВНОСТЬ...</h3>
-        </div>
-        <div id="overlay">
-            <h1 id="u-name" style="margin-bottom: 30px;">---</h1>
-            <button class="btn btn-p" id="btn-in">ВХОД</button>
-            <button class="btn" style="background:var(--red); color:#fff" id="btn-out">ВЫХОД</button>
-            <button class="btn" style="background:none; color:#666" id="btn-cancel">ОТМЕНА</button>
-        </div>
-    </div>
-
-    <div id="edit-modal">
-        <h2 id="edit-title" style="margin-bottom: 25px; text-align: center;">СТАТУС ДНЯ</h2>
-        <div class="edit-grid">
-            <button class="btn" style="background:var(--yellow); color:#000" onclick="app.setLog('YELLOW')">ВХОД</button>
-            <button class="btn" style="background:var(--p); color:#000" onclick="app.setLog('GREEN')">ВЫХОД</button>
-            <button class="btn" style="background:var(--red); color:#fff" onclick="app.setLog('RED')">ПРОГУЛ</button>
-            <button class="btn" style="background:var(--grey); color:#fff" onclick="app.setLog('CLEAR')">СБРОС</button>
-        </div>
-        <button class="btn" style="background:none; color:#666; margin-top:20px" onclick="app.closeEdit()">ЗАКРЫТЬ</button>
-    </div>
-
-    <div id="scr-base" class="screen">
-        <div class="header" style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
-            <h2>ЖУРНАЛ</h2>
-            <button onclick="app.download()" style="color:var(--p); background:none; border:none; font-weight:bold">ОТЧЕТ</button>
-        </div>
-        <div class="scroll" id="base-list"></div>
-    </div>
-
-    <!-- Screen Staff и Nav остаются такими же, только добавим им стилей для кликабельности -->
-    <div id="scr-staff" class="screen">
-        <div class="scroll">
-            <div class="card">
-                <input type="text" id="reg-n" placeholder="Имя Фамилия" style="width:100%; padding:15px; margin-bottom:10px; border-radius:10px; border:none; background:#222; color:#fff">
-                <input type="number" id="reg-rate" placeholder="Ставка/час" style="width:100%; padding:15px; margin-bottom:10px; border-radius:10px; border:none; background:#222; color:#fff">
-                <input type="file" id="reg-f" accept="image/*" capture="user" style="margin-bottom:15px">
-                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ</button>
-            </div>
-            <div id="staff-list"></div>
-        </div>
-    </div>
-
-    <div class="nav">
-        <div class="nav-item active" onclick="app.ui('scr-scan', this)"><b>📷</b>СКАН</div>
-        <div class="nav-item" onclick="app.ui('scr-base', this)"><b>📅</b>БАЗА</div>
-        <div class="nav-item" onclick="app.ui('scr-staff', this)"><b>👥</b>ШТАТ</div>
-    </div>
-
-<script>
-let db;
-let viewDate = new Date();
-let curU = null;
-let editCtx = { name: null, date: null };
-let modelsReady = false;
-
-const app = {
-    async init() {
-        const req = indexedDB.open("BioID_Corp_v88", 1);
-        req.onupgradeneeded = e => {
-            const d = e.target.result;
-            d.createObjectStore("workers", {keyPath: "name"});
-            d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
+        tx.oncomplete = () => {
+            console.log("Данные обновлены для:", name, date);
+            this.renderB(); // Перерисовываем календарь
+            this.closeEdit(); // Закрываем модалку
         };
-        req.onsuccess = e => { db = e.target.result; this.loadModels(); };
-
-        document.getElementById('cam-btn').onclick = () => this.startCamera();
-        document.getElementById('btn-in').onclick = () => this.log('IN');
-        document.getElementById('btn-out').onclick = () => this.log('OUT');
-        document.getElementById('btn-cancel').onclick = () => this.closeOverlay();
     },
 
-    async loadModels() {
-        const p = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        try {
-            // Загружаем только необходимое для скорости
-            await faceapi.nets.tinyFaceDetector.loadFromUri(p);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(p);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(p);
-            modelsReady = true;
-            document.getElementById('st-text').innerText = "МОДЕЛИ ОК";
-        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА СЕТИ"; }
+    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ОТРИСОВКИ ЦВЕТОВ
+    async renderB() {
+        const ws = await this.get("workers");
+        const ls = await this.get("logs");
+        const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+        
+        const mNames = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
+        document.getElementById('cur-m-name').innerText = `${mNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+
+        document.getElementById('base-list').innerHTML = ws.map(w => {
+            let dH = '';
+            let totalH = 0;
+
+            for(let i=1; i<=dim; i++) {
+                const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                
+                // Фильтруем логи конкретно для этого работника и этой даты
+                const dayLogs = ls.filter(l => l.name === w.name && l.date === ds);
+                
+                const cin = dayLogs.find(l => l.type === 'IN');
+                const cout = dayLogs.find(l => l.type === 'OUT');
+                const isAbsent = dayLogs.some(l => l.type === 'ABSENT');
+
+                // Считаем часы если есть и вход и выход
+                if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
+
+                // ОПРЕДЕЛЯЕМ ЦВЕТ (Строгая проверка)
+                let st = '';
+                if (isAbsent) {
+                    st = 'red';
+                } else if (cin && cout) {
+                    st = 'green';
+                } else if (cin) {
+                    st = 'yellow';
+                }
+
+                const safeName = w.name.replace(/'/g, "\\'");
+                dH += `<div class="day ${st}" onclick="app.edit('${safeName}','${ds}')">${i}</div>`;
+            }
+            
+            const salary = (totalH * w.rate).toFixed(0);
+            return `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+                        <b>${w.name}</b>
+                        <span style="color:var(--p)">${salary} ₽</span>
+                    </div>
+                    <div class="cal-row">${dH}</div>
+                </div>
+            `;
+        }).join('');
     },
 
-    async startCamera() {
-        const v = document.getElementById('video');
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user", width: {ideal: 320} } // Снижаем разрешение для скорости
-            });
-            v.srcObject = stream;
-            document.getElementById('cam-btn').style.display = 'none';
-            this.runScanner();
-        } catch(err) { alert("Нет доступа к камере"); }
-    },
-
+    // 3. УСКОРЕННЫЙ СКАНЕР (Оптимизация детекции)
     runScanner() {
         const v = document.getElementById('video');
-        // Оптимизация: inputSize 128 или 160 — это ускоряет работу в 2-3 раза
-        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+        // Уменьшаем inputSize до 128 — это даст максимальный буст скорости на Android
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 });
 
         setInterval(async () => {
             if(curU || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
@@ -171,8 +99,9 @@ const app = {
             if(det) {
                 const ws = await this.get("workers");
                 for(let w of ws) {
+                    // descriptor должен быть Float32Array
                     const dist = faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc));
-                    if(dist < 0.45) {
+                    if(dist < 0.4) { // Немного ужесточили порог для точности
                         curU = w;
                         document.getElementById('u-name').innerText = w.name;
                         document.getElementById('overlay').style.display = 'flex';
@@ -180,98 +109,7 @@ const app = {
                     }
                 }
             }
-        }, 600); // Оптимальный интервал для мобилок
+        }, 400); // Опрашиваем чаще, так как детекция теперь быстрее
     },
 
-    ui(id, el) {
-        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        
-        const target = document.getElementById(id);
-        target.style.display = 'flex';
-        target.classList.add('active');
-        if(el) el.classList.add('active');
-        
-        if(id === 'scr-base') this.renderB();
-        if(id === 'scr-staff') this.renderS();
-    },
-
-    edit(n, d) {
-        editCtx = { name: n, date: d };
-        document.getElementById('edit-title').innerText = n.split(' ')[0] + ": " + d.split('-')[2];
-        document.getElementById('edit-modal').style.display = 'flex';
-    },
-
-    closeEdit() { document.getElementById('edit-modal').style.display = 'none'; },
-
-    async setLog(action) {
-        const { name, date } = editCtx;
-        const tx = db.transaction("logs", "readwrite");
-        const store = tx.objectStore("logs");
-        
-        const all = await this.get("logs");
-        all.filter(l => l.name === name && l.date === date).forEach(l => store.delete(l.id));
-
-        tx.oncomplete = () => {
-            if(action !== 'CLEAR') {
-                const tx2 = db.transaction("logs", "readwrite");
-                const s2 = tx2.objectStore("logs");
-                if(action === 'YELLOW') s2.add({ name, date, type: 'IN', ts: Date.now() });
-                if(action === 'GREEN') {
-                    s2.add({ name, date, type: 'IN', ts: Date.now() });
-                    s2.add({ name, date, type: 'OUT', ts: Date.now() + 28800000 });
-                }
-                if(action === 'RED') s2.add({ name, date, type: 'ABSENT' });
-                tx2.oncomplete = () => { this.renderB(); this.closeEdit(); };
-            } else {
-                this.renderB();
-                this.closeEdit();
-            }
-        };
-    },
-
-    async renderB() {
-        const ws = await this.get("workers");
-        const ls = await this.get("logs");
-        const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-
-        document.getElementById('base-list').innerHTML = ws.map(w => {
-            let dH = '';
-            for(let i=1; i<=dim; i++) {
-                const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                const dl = ls.filter(l => l.name === w.name && l.date === ds);
-                const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
-                let st = dl.length ? (cout ? 'green' : 'yellow') : (dl.some(l => l.type==='ABSENT') ? 'red' : '');
-                // Экранируем имя для безопасного вызова функции
-                const safeName = w.name.replace(/'/g, "\\'");
-                dH += `<div class="day ${st}" onclick="app.edit('${safeName}','${ds}')">${i}</div>`;
-            }
-            return `<div class="card"><b>${w.name}</b><div class="cal-row">${dH}</div></div>`;
-        }).join('');
-    },
-
-    // Остальные вспомогательные функции (reg, renderS, log, get, closeOverlay) оставляем как были
-    async log(t) {
-        const d = new Date().toISOString().split('T')[0];
-        const tx = db.transaction("logs", "readwrite");
-        tx.objectStore("logs").add({ name: curU.name, date: d, type: t, ts: Date.now() });
-        this.closeOverlay();
-    },
-    closeOverlay() { curU = null; document.getElementById('overlay').style.display = 'none'; },
-    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); },
-    async renderS() {
-        const ws = await this.get("workers");
-        document.getElementById('staff-list').innerHTML = ws.map(w => `
-            <div class="card" style="display:flex; justify-content:space-between;">
-                <b>${w.name}</b>
-                <button onclick="app.delS('${w.name}')" style="color:var(--red); background:none; border:none;">УДАЛИТЬ</button>
-            </div>
-        `).join('');
-    },
-    delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } }
-};
-window.onload = () => app.init();
-</script>
-</body>
-</html>
+// ... (остальной код)
