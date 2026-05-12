@@ -1,107 +1,175 @@
-// ... (начало кода остается прежним)
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BioID Ultimate v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, system-ui, sans-serif; height: 100vh; overflow: hidden; }
 
-    // 1. ИСПРАВЛЕННАЯ ЛОГИКА СОХРАНЕНИЯ
-    async setLog(action) {
-        const { name, date } = editCtx;
-        const tx = db.transaction("logs", "readwrite");
-        const store = tx.objectStore("logs");
+        /* Экраны */
+        .screen { display: none; width: 100%; height: 100%; position: fixed; flex-direction: column; padding-bottom: 90px; z-index: 10; }
+        .screen.active { display: flex; }
         
-        // Сначала получаем все логи, чтобы найти ID для удаления
-        const all = await this.get("logs");
-        const toDelete = all.filter(l => l.name === name && l.date === date);
-        
-        for (let l of toDelete) {
-            store.delete(l.id);
-        }
+        /* Навигация */
+        .nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0a; display: flex; border-top: 1px solid #222; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; cursor: pointer; }
+        .nav-item.active { color: var(--p); }
+        .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
-        // Добавляем новые записи
-        if (action === 'YELLOW') {
-            store.add({ name, date, type: 'IN', ts: Date.now() });
-        } else if (action === 'GREEN') {
-            store.add({ name, date, type: 'IN', ts: Date.now() });
-            store.add({ name, date, type: 'OUT', ts: Date.now() + 1 }); // +1мс для порядка
-        } else if (action === 'RED') {
-            store.add({ name, date, type: 'ABSENT' });
-        }
-        // Если CLEAR — просто ничего не добавляем
+        /* Сканер */
+        .video-box { width: 100%; height: 55vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        #cam-btn { position: absolute; z-index: 99; padding: 20px 40px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: 900; box-shadow: 0 0 30px rgba(0,255,136,0.5); }
 
-        tx.oncomplete = () => {
-            console.log("Данные обновлены для:", name, date);
-            this.renderB(); // Перерисовываем календарь
-            this.closeEdit(); // Закрываем модалку
+        /* Контент */
+        .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
+        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; }
+
+        /* Календарь */
+        .cal-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
+        .cal-row::-webkit-scrollbar { display: none; }
+        .day { min-width: 44px; height: 44px; border-radius: 12px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; cursor: pointer; transition: 0.1s; }
+        .day:active { transform: scale(0.9); }
+        .day.green { background: var(--p); color: #000; font-weight: bold; }
+        .day.red { background: var(--red); color: #fff; }
+        .day.yellow { background: var(--yellow); color: #000; }
+
+        /* Модалки */
+        #overlay, #edit-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 30px; }
+        .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-bottom: 10px; }
+        .btn-p { background: var(--p); color: #000; }
+        .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+
+        /* Поля ввода */
+        input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <!-- ЭКРАН: СКАНЕР -->
+    <div id="scr-scan" class="screen active">
+        <div class="video-box">
+            <button id="cam-btn">ЗАПУСТИТЬ КАМЕРУ</button>
+            <video id="video" autoplay playsinline muted></video>
+        </div>
+        <div class="scroll">
+            <h3 id="st-text" style="text-align:center; color:var(--p); opacity: 0.8">ИНИЦИАЛИЗАЦИЯ...</h3>
+        </div>
+        <div id="overlay">
+            <h1 id="u-name" style="font-size: 32px; margin-bottom: 30px; text-align: center;">---</h1>
+            <button class="btn btn-p" id="btn-in">ВХОД</button>
+            <button class="btn" style="background:var(--red); color:#fff" id="btn-out">ВЫХОД</button>
+            <button class="btn" style="background:none; color:#666; margin-top:10px" id="btn-cancel">ОТМЕНА</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА РЕДАКТИРОВАНИЯ ДНЯ -->
+    <div id="edit-modal">
+        <h2 id="edit-title" style="margin-bottom: 25px; text-align: center;">СТАТУС ДНЯ</h2>
+        <div class="edit-grid">
+            <button class="btn" style="background:var(--yellow); color:#000" onclick="app.setLog('YELLOW')">ВХОД</button>
+            <button class="btn" style="background:var(--p); color:#000" onclick="app.setLog('GREEN')">ВЫХОД</button>
+            <button class="btn" style="background:var(--red); color:#fff" onclick="app.setLog('RED')">ПРОГУЛ</button>
+            <button class="btn" style="background:var(--grey); color:#fff" onclick="app.setLog('CLEAR')">СБРОС</button>
+        </div>
+        <button class="btn" style="background:none; color:#666; margin-top:20px" onclick="app.closeEdit()">ЗАКРЫТЬ</button>
+    </div>
+
+    <!-- ЭКРАН: БАЗА -->
+    <div id="scr-base" class="screen">
+        <div class="header" style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center">
+            <h2>ЖУРНАЛ</h2>
+            <button onclick="app.download()" style="background:none; border:none; color:var(--p); font-weight:bold">ОТЧЕТ .TXT</button>
+        </div>
+        <div class="scroll">
+            <div id="base-list"></div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН: ШТАТ -->
+    <div id="scr-staff" class="screen">
+        <div class="header" style="padding:20px; border-bottom:1px solid #222"><h2>ШТАТ</h2></div>
+        <div class="scroll">
+            <div class="card">
+                <input type="text" id="reg-n" placeholder="Имя Фамилия">
+                <input type="number" id="reg-rate" placeholder="Ставка в час">
+                <input type="file" id="reg-f" accept="image/*" capture="user">
+                <button class="btn btn-p" onclick="app.reg()">ДОБАВИТЬ В БАЗУ</button>
+            </div>
+            <div id="staff-list"></div>
+        </div>
+    </div>
+
+    <!-- МЕНЮ -->
+    <div class="nav">
+        <div class="nav-item active" onclick="app.ui('scr-scan', this)"><b>📷</b>СКАН</div>
+        <div class="nav-item" onclick="app.ui('scr-base', this)"><b>📅</b>БАЗА</div>
+        <div class="nav-item" onclick="app.ui('scr-staff', this)"><b>👥</b>ШТАТ</div>
+    </div>
+
+<script>
+let db;
+let viewDate = new Date();
+let curU = null;
+let editCtx = { name: null, date: null };
+let modelsReady = false;
+
+const app = {
+    async init() {
+        const req = indexedDB.open("BioID_Ultimate_v90", 1);
+        req.onupgradeneeded = e => {
+            const d = e.target.result;
+            d.createObjectStore("workers", {keyPath: "name"});
+            d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
         };
+        req.onsuccess = e => { db = e.target.result; this.loadModels(); };
+
+        document.getElementById('cam-btn').onclick = () => this.startCamera();
+        document.getElementById('btn-in').onclick = () => this.log('IN');
+        document.getElementById('btn-out').onclick = () => this.log('OUT');
+        document.getElementById('btn-cancel').onclick = () => this.closeOverlay();
     },
 
-    // 2. ИСПРАВЛЕННАЯ ЛОГИКА ОТРИСОВКИ ЦВЕТОВ
-    async renderB() {
-        const ws = await this.get("workers");
-        const ls = await this.get("logs");
-        const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-        
-        const mNames = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
-        document.getElementById('cur-m-name').innerText = `${mNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
-
-        document.getElementById('base-list').innerHTML = ws.map(w => {
-            let dH = '';
-            let totalH = 0;
-
-            for(let i=1; i<=dim; i++) {
-                const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                
-                // Фильтруем логи конкретно для этого работника и этой даты
-                const dayLogs = ls.filter(l => l.name === w.name && l.date === ds);
-                
-                const cin = dayLogs.find(l => l.type === 'IN');
-                const cout = dayLogs.find(l => l.type === 'OUT');
-                const isAbsent = dayLogs.some(l => l.type === 'ABSENT');
-
-                // Считаем часы если есть и вход и выход
-                if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
-
-                // ОПРЕДЕЛЯЕМ ЦВЕТ (Строгая проверка)
-                let st = '';
-                if (isAbsent) {
-                    st = 'red';
-                } else if (cin && cout) {
-                    st = 'green';
-                } else if (cin) {
-                    st = 'yellow';
-                }
-
-                const safeName = w.name.replace(/'/g, "\\'");
-                dH += `<div class="day ${st}" onclick="app.edit('${safeName}','${ds}')">${i}</div>`;
-            }
-            
-            const salary = (totalH * w.rate).toFixed(0);
-            return `
-                <div class="card">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px">
-                        <b>${w.name}</b>
-                        <span style="color:var(--p)">${salary} ₽</span>
-                    </div>
-                    <div class="cal-row">${dH}</div>
-                </div>
-            `;
-        }).join('');
+    async loadModels() {
+        const p = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        try {
+            await faceapi.nets.tinyFaceDetector.loadFromUri(p);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(p);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(p);
+            modelsReady = true;
+            document.getElementById('st-text').innerText = "ГОТОВ К РАБОТЕ";
+        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА СЕТИ"; }
     },
 
-    // 3. УСКОРЕННЫЙ СКАНЕР (Оптимизация детекции)
+    async startCamera() {
+        const v = document.getElementById('video');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user", width: {ideal: 320} } 
+            });
+            v.srcObject = stream;
+            document.getElementById('cam-btn').style.display = 'none';
+            document.getElementById('st-text').innerText = "ПОИСК ЛИЦА...";
+            this.runScanner();
+        } catch(err) { alert("Камера недоступна"); }
+    },
+
     runScanner() {
         const v = document.getElementById('video');
-        // Уменьшаем inputSize до 128 — это даст максимальный буст скорости на Android
         const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 });
 
         setInterval(async () => {
             if(curU || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
-            
             const det = await faceapi.detectSingleFace(v, options).withFaceLandmarks().withFaceDescriptor();
-            
             if(det) {
                 const ws = await this.get("workers");
                 for(let w of ws) {
-                    // descriptor должен быть Float32Array
                     const dist = faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc));
-                    if(dist < 0.4) { // Немного ужесточили порог для точности
+                    if(dist < 0.42) {
                         curU = w;
                         document.getElementById('u-name').innerText = w.name;
                         document.getElementById('overlay').style.display = 'flex';
@@ -109,7 +177,133 @@
                     }
                 }
             }
-        }, 400); // Опрашиваем чаще, так как детекция теперь быстрее
+        }, 400);
     },
 
-// ... (остальной код)
+    ui(id, el) {
+        document.querySelectorAll('.screen').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+        const target = document.getElementById(id);
+        target.style.display = 'flex';
+        target.classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if(el) el.classList.add('active');
+        if(id === 'scr-base') this.renderB();
+        if(id === 'scr-staff') this.renderS();
+    },
+
+    edit(n, d) {
+        editCtx = { name: n, date: d };
+        document.getElementById('edit-title').innerText = `${n}\n${d}`;
+        document.getElementById('edit-modal').style.display = 'flex';
+    },
+
+    closeEdit() { document.getElementById('edit-modal').style.display = 'none'; },
+
+    async setLog(action) {
+        const { name, date } = editCtx;
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
+        
+        const all = await this.get("logs");
+        all.filter(l => l.name === name && l.date === date).forEach(l => store.delete(l.id));
+
+        tx.oncomplete = () => {
+            if (action !== 'CLEAR') {
+                const tx2 = db.transaction("logs", "readwrite");
+                const s2 = tx2.objectStore("logs");
+                if(action === 'YELLOW') s2.add({ name, date, type: 'IN', ts: Date.now() });
+                if(action === 'GREEN') {
+                    s2.add({ name, date, type: 'IN', ts: Date.now() });
+                    s2.add({ name, date, type: 'OUT', ts: Date.now() + 28800000 });
+                }
+                if(action === 'RED') s2.add({ name, date, type: 'ABSENT' });
+                tx2.oncomplete = () => { this.renderB(); this.closeEdit(); };
+            } else {
+                this.renderB(); this.closeEdit();
+            }
+        };
+    },
+
+    async renderB() {
+        const ws = await this.get("workers");
+        const ls = await this.get("logs");
+        const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+
+        document.getElementById('base-list').innerHTML = ws.map(w => {
+            let dH = '', totalH = 0;
+            for(let i=1; i<=dim; i++) {
+                const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const dl = ls.filter(l => l.name === w.name && l.date === ds);
+                const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
+                const isAbs = dl.some(l => l.type === 'ABSENT');
+                
+                if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
+                let st = isAbs ? 'red' : (cin && cout ? 'green' : (cin ? 'yellow' : ''));
+                
+                const safeName = w.name.replace(/'/g, "\\'");
+                dH += `<div class="day ${st}" onclick="app.edit('${safeName}','${ds}')">${i}</div>`;
+            }
+            return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)} ₽</span><div class="cal-row">${dH}</div></div>`;
+        }).join('');
+    },
+
+    async log(t) {
+        const d = new Date().toISOString().split('T')[0];
+        const tx = db.transaction("logs", "readwrite");
+        tx.objectStore("logs").add({ name: curU.name, date: d, type: t, ts: Date.now() });
+        this.closeOverlay();
+    },
+
+    closeOverlay() { curU = null; document.getElementById('overlay').style.display = 'none'; },
+
+    async reg() {
+        const n = document.getElementById('reg-n').value, r = document.getElementById('reg-rate').value, f = document.getElementById('reg-f').files[0];
+        if(!n || !f || !r) return alert("Заполни данные!");
+        const img = await faceapi.bufferToImage(f);
+        const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        if(det) {
+            const rd = new FileReader(); rd.readAsDataURL(f);
+            rd.onload = () => {
+                db.transaction("workers", "readwrite").objectStore("workers").put({
+                    name: n, rate: parseFloat(r), desc: Array.from(det.descriptor)
+                });
+                alert("Добавлен!"); this.renderS();
+            };
+        } else alert("Лицо не видно!");
+    },
+
+    async renderS() {
+        const ws = await this.get("workers");
+        document.getElementById('staff-list').innerHTML = ws.map(w => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center">
+                <div><b>${w.name}</b><br><small>${w.rate}/час</small></div>
+                <button onclick="app.delS('${w.name}')" style="background:none; border:none; color:var(--red); font-weight:bold">УДАЛИТЬ</button>
+            </div>
+        `).join('');
+    },
+
+    delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
+
+    async download() {
+        const ws = await this.get("workers");
+        const ls = await this.get("logs");
+        let t = `ОТЧЕТ ЗА ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
+        ws.forEach(w => {
+            let h = 0;
+            ls.filter(l => l.name === w.name).forEach((l, i, arr) => {
+                const pair = arr.find(x => x.date === l.date && x.type === 'OUT' && l.type === 'IN');
+                if(pair) h += (pair.ts - l.ts) / 3600000;
+            });
+            t += `${w.name}: ${h.toFixed(1)}ч | ${(h * w.rate).toFixed(0)} ₽\n`;
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([t])); a.download = "report.txt"; a.click();
+    },
+
+    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
+};
+
+window.onload = () => app.init();
+</script>
+</body>
+</html>
