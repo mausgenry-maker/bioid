@@ -61,11 +61,16 @@
         </div>
         
         <div id="overlay">
-            <h1 id="u-name" style="font-size: 32px; margin-bottom: 30px;">---</h1>
-            <button class="btn btn-p" id="btn-in">ВХОД</button>
-            <button class="btn" style="background:var(--red); color:#fff; margin-top:15px" id="btn-out">ВЫХОД</button>
-            <button class="btn" style="background:none; color:#666; margin-top:20px" id="btn-cancel">ОТМЕНА</button>
-        </div>
+    <h1 id="u-name" style="font-size: 28px; margin-bottom: 10px; text-align: center;">---</h1>
+    <p id="u-date" style="color: #666; margin-bottom: 30px;"></p>
+    
+    <button class="btn btn-y" onclick="app.log('IN')">ВХОД (ЖЕЛТЫЙ)</button>
+    <button class="btn btn-p" onclick="app.log('OUT')">ВЫХОД (ЗЕЛЕНЫЙ)</button>
+    <button class="btn btn-r" id="opt-abs" onclick="app.log('ABSENT')">ПРОГУЛ (КРАСНЫЙ)</button>
+    <button class="btn btn-g" id="opt-res" onclick="app.log('RESET')">ОЧИСТИТЬ</button>
+    
+    <button class="btn" style="background:none; color:#666; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
+</div>
     </div>
 
     <!-- SCREEN: BASE -->
@@ -198,14 +203,47 @@ const app = {
         if(id === 'scr-staff') this.renderS();
     },
 
-    async log(t) {
-        const d = new Date().toISOString().split('T')[0];
-        const tx = db.transaction("logs", "readwrite");
-        tx.objectStore("logs").add({ 
-            name: curU.name, date: d, type: t, ts: Date.now() 
-        });
+    // Вызывается при клике на число в календаре
+async openEdit(name, date) {
+    const ws = await this.get("workers");
+    const worker = ws.find(w => w.name === name);
+    
+    curU = { ...worker, targetDate: date };
+    document.getElementById('u-name').innerText = worker.name;
+    document.getElementById('u-date').innerText = date;
+    
+    // Показываем все кнопки
+    document.getElementById('opt-abs').style.display = 'block';
+    document.getElementById('opt-res').style.display = 'block';
+    document.getElementById('overlay').style.display = 'flex';
+},
+
+async log(type) {
+    const tx = db.transaction("logs", "readwrite");
+    const store = tx.objectStore("logs");
+    
+    // 1. Сначала удаляем все старые записи за этот день для этого юзера
+    const all = await this.get("logs");
+    all.filter(l => l.name === curU.name && l.date === curU.targetDate)
+       .forEach(l => store.delete(l.id));
+
+    // 2. Добавляем новую запись в зависимости от кнопки
+    if (type === 'IN') {
+        store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
+    } else if (type === 'OUT') {
+        // Для выхода ставим метку и входа (8 часов назад) и выхода, чтобы считались деньги
+        store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() - 28800000 });
+        store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() });
+    } else if (type === 'ABSENT') {
+        store.add({ name: curU.name, date: curU.targetDate, type: 'ABSENT' });
+    }
+    // Если RESET — ничего не добавляем, база останется пустой (серый цвет)
+
+    tx.oncomplete = () => {
         this.closeOverlay();
-    },
+        this.renderB(); // Перерисовываем календарь, чтобы цвета обновились
+    };
+},
 
     closeOverlay() { curU = null; document.getElementById('overlay').style.display = 'none'; },
 
@@ -254,7 +292,8 @@ const app = {
                 const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
                 if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
                 let st = dl.length ? (cout ? 'green' : 'yellow') : (dl.some(l => l.type==='ABSENT') ? 'red' : '');
-                dH += `<div class="day ${st}" onclick="app.edit('${w.name}','${ds}')">${i}</div>`;
+                // внутри цикла в renderB
+dH += `<div class="day ${st}" onclick="app.openEdit('${w.name}','${ds}')">${i}</div>`;
             }
             return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)}</span><div class="cal-row">${dH}</div></div>`;
         }).join('');
@@ -305,3 +344,4 @@ window.onload = () => app.init();
 </script>
 </body>
 </html>
+
