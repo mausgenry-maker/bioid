@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BioID Ultimate APK</title>
+    <title>BioID Ultimate Fix</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
         :root { --p: #00ff88; --bg: #000; --card: #111; --red: #ff4d4d; --yellow: #f1c40f; --grey: #2a2a2a; }
@@ -14,66 +14,49 @@
         .screen.active { display: flex; }
         
         .nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0a; display: flex; border-top: 1px solid #222; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #555; cursor: pointer; }
         .nav-item.active { color: var(--p); }
         .nav-item b { font-size: 24px; margin-bottom: 4px; }
 
         .video-box { width: 100%; height: 60vh; background: #111; position: relative; border-bottom: 2px solid var(--p); display: flex; align-items: center; justify-content: center; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; background: #000; }
         
-        #cam-btn { 
-            position: absolute; z-index: 99; padding: 20px 40px; 
-            background: var(--p); color: #000; border: none; 
-            border-radius: 50px; font-weight: 900; font-size: 16px;
-            box-shadow: 0 0 30px rgba(0,255,136,0.5); 
-        }
+        #cam-btn { position: absolute; z-index: 99; padding: 20px 40px; background: var(--p); color: #000; border: none; border-radius: 50px; font-weight: 900; font-size: 16px; box-shadow: 0 0 30px rgba(0,255,136,0.5); }
 
-        .scroll { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
+        .scroll { flex: 1; overflow-y: auto; padding: 15px; }
         .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 12px; border: 1px solid #222; }
 
         .m-ctrl { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; border-radius: 12px; margin-bottom: 15px; padding: 5px; }
         .m-btn { padding: 10px 15px; background: #222; border: none; color: #fff; border-radius: 8px; }
 
         .cal-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
-        .day { min-width: 40px; height: 40px; border-radius: 10px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-        .day.green { background: var(--p); color: #000; }
-        .day.red { background: var(--red); color: #fff; }
-        .day.yellow { background: var(--yellow); color: #000; }
+        .day { min-width: 45px; height: 45px; border-radius: 12px; background: var(--grey); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; border: 1px solid #333; }
+        .day.green { background: var(--p); color: #000; font-weight: bold; border: none; }
+        .day.red { background: var(--red); color: #fff; font-weight: bold; border: none; }
+        .day.yellow { background: var(--yellow); color: #000; font-weight: bold; border: none; }
 
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 25px; }
 
-        .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; }
+        .btn { padding: 18px; border: none; border-radius: 15px; font-weight: bold; width: 100%; font-size: 16px; margin-bottom: 10px; }
         .btn-p { background: var(--p); color: #000; }
+        .btn-y { background: var(--yellow); color: #000; }
+        .btn-r { background: var(--red); color: #fff; }
+        .btn-g { background: #444; color: #fff; }
         input { width: 100%; padding: 16px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 14px; margin-bottom: 10px; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN: SCANNER -->
     <div id="scr-scan" class="screen active">
         <div class="video-box">
             <button id="cam-btn">ЗАПУСТИТЬ КАМЕРУ</button>
             <video id="video" autoplay playsinline muted></video>
         </div>
         <div class="scroll">
-            <h3 id="st-text" style="text-align:center; color:var(--p); opacity: 0.8">ОЖИДАНИЕ ИНИЦИАЛИЗАЦИИ...</h3>
-            <p id="debug-info" style="font-size:10px; color:#555; text-align:center; margin-top:10px"></p>
+            <h3 id="st-text" style="text-align:center; color:var(--p)">ОЖИДАНИЕ...</h3>
         </div>
-        
-        <div id="overlay">
-    <h1 id="u-name" style="font-size: 28px; margin-bottom: 10px; text-align: center;">---</h1>
-    <p id="u-date" style="color: #666; margin-bottom: 30px;"></p>
-    
-    <button class="btn btn-y" onclick="app.log('IN')">ВХОД (ЖЕЛТЫЙ)</button>
-    <button class="btn btn-p" onclick="app.log('OUT')">ВЫХОД (ЗЕЛЕНЫЙ)</button>
-    <button class="btn btn-r" id="opt-abs" onclick="app.log('ABSENT')">ПРОГУЛ (КРАСНЫЙ)</button>
-    <button class="btn btn-g" id="opt-res" onclick="app.log('RESET')">ОЧИСТИТЬ</button>
-    
-    <button class="btn" style="background:none; color:#666; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
-</div>
     </div>
 
-    <!-- SCREEN: BASE -->
     <div id="scr-base" class="screen">
         <div class="header" style="padding:20px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center">
             <h2>ЖУРНАЛ</h2>
@@ -89,7 +72,6 @@
         </div>
     </div>
 
-    <!-- SCREEN: STAFF -->
     <div id="scr-staff" class="screen">
         <div class="header" style="padding:20px; border-bottom:1px solid #222"><h2>ШТАТ</h2></div>
         <div class="scroll">
@@ -103,6 +85,16 @@
         </div>
     </div>
 
+    <div id="overlay">
+        <h1 id="u-name" style="font-size: 28px; margin-bottom: 5px; text-align: center;">---</h1>
+        <p id="u-date" style="color: #666; margin-bottom: 25px;"></p>
+        <button class="btn btn-y" onclick="app.log('IN')">ВХОД (ЖЕЛТЫЙ)</button>
+        <button class="btn btn-p" onclick="app.log('OUT')">ВЫХОД (ЗЕЛЕНЫЙ)</button>
+        <button class="btn btn-r" id="opt-abs" onclick="app.log('ABSENT')">ПРОГУЛ (КРАСНЫЙ)</button>
+        <button class="btn btn-g" id="opt-res" onclick="app.log('RESET')">ОЧИСТИТЬ</button>
+        <button class="btn" style="background:none; color:#666; margin-top:10px" onclick="app.closeOverlay()">ОТМЕНА</button>
+    </div>
+
     <div class="nav">
         <div class="nav-item active" onclick="app.ui('scr-scan', this)"><b>📷</b>СКАНЕР</div>
         <div class="nav-item" onclick="app.ui('scr-base', this)"><b>📅</b>БАЗА</div>
@@ -110,83 +102,49 @@
     </div>
 
 <script>
-let db;
-let viewDate = new Date();
-let curU = null;
-let modelsReady = false;
+let db, viewDate = new Date(), curU = null, modelsReady = false;
 
 const app = {
     async init() {
-        // Логирование контекста для отладки
-        document.getElementById('debug-info').innerText = `Secure: ${window.isSecureContext} | Agent: ${navigator.userAgent.slice(0,40)}`;
-        
-        const req = indexedDB.open("BioID_Corp_v88", 1);
+        const req = indexedDB.open("BioID_Corp_v99", 1);
         req.onupgradeneeded = e => {
             const d = e.target.result;
             d.createObjectStore("workers", {keyPath: "name"});
             d.createObjectStore("logs", {keyPath: "id", autoIncrement: true});
         };
         req.onsuccess = e => { db = e.target.result; this.loadModels(); };
-
-        // Навешиваем события
         document.getElementById('cam-btn').onclick = () => this.startCamera();
-        document.getElementById('btn-in').onclick = () => this.log('IN');
-        document.getElementById('btn-out').onclick = () => this.log('OUT');
-        document.getElementById('btn-cancel').onclick = () => this.closeOverlay();
     },
 
     async loadModels() {
-        const p = './models';
+        const p = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
         try {
             await faceapi.nets.tinyFaceDetector.loadFromUri(p);
             await faceapi.nets.faceLandmark68Net.loadFromUri(p);
             await faceapi.nets.faceRecognitionNet.loadFromUri(p);
             modelsReady = true;
-            document.getElementById('st-text').innerText = "ГОТОВО К ЗАПУСКУ";
-        } catch(e) {
-            document.getElementById('st-text').innerText = "ОШИБКА ЗАГРУЗКИ МОДЕЛЕЙ";
-        }
+            document.getElementById('st-text').innerText = "ГОТОВО";
+        } catch(e) { document.getElementById('st-text').innerText = "ОШИБКА МОДЕЛЕЙ"; }
     },
 
     async startCamera() {
-        const v = document.getElementById('video');
-        const btn = document.getElementById('cam-btn');
-        const st = document.getElementById('st-text');
-
-        st.innerText = "ЗАПРОС КАМЕРЫ...";
-
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user", width: 640, height: 480 } 
-            });
-            v.srcObject = stream;
-            await v.play();
-            btn.style.display = 'none';
-            st.innerText = "ПОИСК ЛИЦА...";
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            document.getElementById('video').srcObject = stream;
+            document.getElementById('cam-btn').style.display = 'none';
             this.runScanner();
-        } catch(err) {
-            st.innerText = "ОШИБКА: " + err.name;
-            alert("Камера недоступна. Убедитесь, что используете HTTPS и дали разрешения в APK.");
-        }
+        } catch(err) { alert("Камера недоступна"); }
     },
 
     runScanner() {
         setInterval(async () => {
             if(curU || !modelsReady || !document.getElementById('scr-scan').classList.contains('active')) return;
-            
-            const v = document.getElementById('video');
-            const ws = await this.get("workers");
-            if(!ws.length) return;
-
-            const det = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-            
+            const det = await faceapi.detectSingleFace(document.getElementById('video'), new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if(det) {
+                const ws = await this.get("workers");
                 for(let w of ws) {
-                    const dist = faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc));
-                    if(dist < 0.45) {
-                        curU = w;
-                        document.getElementById('u-name').innerText = w.name;
-                        document.getElementById('overlay').style.display = 'flex';
+                    if(faceapi.euclideanDistance(det.descriptor, new Float32Array(w.desc)) < 0.45) {
+                        this.openEdit(w.name, new Date().toISOString().split('T')[0], true);
                         break;
                     }
                 }
@@ -194,94 +152,56 @@ const app = {
         }, 1000);
     },
 
-    ui(id, el) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(el) el.classList.add('active');
-        if(id === 'scr-base') this.renderB();
-        if(id === 'scr-staff') this.renderS();
+    async openEdit(name, date, isScan = false) {
+        const ws = await this.get("workers");
+        const worker = ws.find(w => w.name === name);
+        if(!worker) return;
+        curU = { ...worker, targetDate: date };
+        document.getElementById('u-name').innerText = worker.name;
+        document.getElementById('u-date').innerText = date;
+        document.getElementById('opt-abs').style.display = isScan ? 'none' : 'block';
+        document.getElementById('opt-res').style.display = isScan ? 'none' : 'block';
+        document.getElementById('overlay').style.display = 'flex';
     },
 
-    // Вызывается при клике на число в календаре
-async openEdit(name, date) {
-    const ws = await this.get("workers");
-    const worker = ws.find(w => w.name === name);
-    
-    curU = { ...worker, targetDate: date };
-    document.getElementById('u-name').innerText = worker.name;
-    document.getElementById('u-date').innerText = date;
-    
-    // Показываем все кнопки
-    document.getElementById('opt-abs').style.display = 'block';
-    document.getElementById('opt-res').style.display = 'block';
-    document.getElementById('overlay').style.display = 'flex';
-},
+    async log(type) {
+        const tx = db.transaction("logs", "readwrite");
+        const store = tx.objectStore("logs");
+        const all = await this.get("logs");
+        all.filter(l => l.name === curU.name && l.date === curU.targetDate).forEach(l => store.delete(l.id));
 
-async log(type) {
-    const tx = db.transaction("logs", "readwrite");
-    const store = tx.objectStore("logs");
-    
-    // 1. Сначала удаляем все старые записи за этот день для этого юзера
-    const all = await this.get("logs");
-    all.filter(l => l.name === curU.name && l.date === curU.targetDate)
-       .forEach(l => store.delete(l.id));
+        if(type === 'IN') {
+            store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
+        } else if(type === 'OUT') {
+            // Если нажимаем ВЫХОД, автоматически ставим ВХОД 8ч назад для расчета денег
+            store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() - 28800000 });
+            store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() });
+        } else if(type === 'ABSENT') {
+            store.add({ name: curU.name, date: curU.targetDate, type: 'ABSENT' });
+        }
 
-    // 2. Добавляем новую запись в зависимости от кнопки
-    if (type === 'IN') {
-        store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() });
-    } else if (type === 'OUT') {
-        // Для выхода ставим метку и входа (8 часов назад) и выхода, чтобы считались деньги
-        store.add({ name: curU.name, date: curU.targetDate, type: 'IN', ts: Date.now() - 28800000 });
-        store.add({ name: curU.name, date: curU.targetDate, type: 'OUT', ts: Date.now() });
-    } else if (type === 'ABSENT') {
-        store.add({ name: curU.name, date: curU.targetDate, type: 'ABSENT' });
-    }
-    // Если RESET — ничего не добавляем, база останется пустой (серый цвет)
-
-    tx.oncomplete = () => {
-        this.closeOverlay();
-        this.renderB(); // Перерисовываем календарь, чтобы цвета обновились
-    };
-},
+        tx.oncomplete = () => { this.closeOverlay(); this.renderB(); };
+    },
 
     closeOverlay() { curU = null; document.getElementById('overlay').style.display = 'none'; },
 
     async reg() {
         const n = document.getElementById('reg-n').value, r = document.getElementById('reg-rate').value, f = document.getElementById('reg-f').files[0];
-        if(!n || !f || !r) return alert("Заполните всё!");
+        if(!n || !f || !r) return alert("Заполни всё!");
         const img = await faceapi.bufferToImage(f);
         const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
         if(det) {
-            const rd = new FileReader(); rd.readAsDataURL(f);
-            rd.onload = () => {
-                db.transaction("workers", "readwrite").objectStore("workers").put({
-                    name: n, rate: parseFloat(r), desc: Array.from(det.descriptor), pic: rd.result
-                });
-                alert("Сотрудник добавлен!"); this.renderS();
-            };
-        } else alert("Лицо не обнаружено!");
+            db.transaction("workers", "readwrite").objectStore("workers").put({
+                name: n, rate: parseFloat(r), desc: Array.from(det.descriptor)
+            });
+            alert("Добавлен!"); this.renderS();
+        } else alert("Лицо не найдено!");
     },
-
-    async renderS() {
-        const ws = await this.get("workers");
-        document.getElementById('staff-list').innerHTML = ws.map(w => `
-            <div class="card" style="display:flex; justify-content:space-between; align-items:center">
-                <div><b>${w.name}</b><br><small>${w.rate}/час</small></div>
-                <button onclick="app.delS('${w.name}')" style="background:none; border:none; color:var(--red); font-weight:bold">УДАЛИТЬ</button>
-            </div>
-        `).join('');
-    },
-
-    async delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
-
-    changeMonth(dir) { viewDate.setMonth(viewDate.getMonth() + dir); this.renderB(); },
 
     async renderB() {
         const mNames = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
         document.getElementById('cur-m-name').innerText = `${mNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
-        const ws = await this.get("workers");
-        const ls = await this.get("logs");
+        const ws = await this.get("workers"), ls = await this.get("logs");
         const dim = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
         document.getElementById('base-list').innerHTML = ws.map(w => {
@@ -289,39 +209,33 @@ async log(type) {
             for(let i=1; i<=dim; i++) {
                 const ds = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
                 const dl = ls.filter(l => l.name === w.name && l.date === ds);
-                const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT');
+                const cin = dl.find(l => l.type === 'IN'), cout = dl.find(l => l.type === 'OUT'), abs = dl.find(l => l.type === 'ABSENT');
                 if(cin && cout) totalH += (cout.ts - cin.ts) / 3600000;
-                let st = dl.length ? (cout ? 'green' : 'yellow') : (dl.some(l => l.type==='ABSENT') ? 'red' : '');
-                // внутри цикла в renderB
-dH += `<div class="day ${st}" onclick="app.openEdit('${w.name}','${ds}')">${i}</div>`;
+                let st = abs ? 'red' : (cout ? 'green' : (cin ? 'yellow' : ''));
+                dH += `<div class="day ${st}" onclick="app.openEdit('${w.name}','${ds}')">${i}</div>`;
             }
-            return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)}</span><div class="cal-row">${dH}</div></div>`;
+            return `<div class="card"><b>${w.name}</b> <span style="float:right; color:var(--p)">${(totalH * w.rate).toFixed(0)} ₽</span><div class="cal-row">${dH}</div></div>`;
         }).join('');
     },
 
-    async edit(n, d) {
-        const s = prompt("1: Был (8ч), 2: Прогул, 3: Очистить");
-        if(!s) return;
-        const tx = db.transaction("logs", "readwrite");
-        const all = await this.get("logs");
-        all.filter(l => l.name === n && l.date === d).forEach(l => tx.objectStore("logs").delete(l.id));
-        tx.oncomplete = () => {
-            if(s==='1') {
-                const tx2 = db.transaction("logs", "readwrite");
-                tx2.objectStore("logs").add({name: n, date: d, type: 'IN', ts: Date.now()});
-                tx2.objectStore("logs").add({name: n, date: d, type: 'OUT', ts: Date.now() + 28800000});
-                tx2.oncomplete = () => this.renderB();
-            } else if(s==='2') {
-                const tx3 = db.transaction("logs", "readwrite");
-                tx3.objectStore("logs").add({name: n, date: d, type: 'ABSENT'});
-                tx3.oncomplete = () => this.renderB();
-            } else this.renderB();
-        };
+    async renderS() {
+        const ws = await this.get("workers");
+        document.getElementById('staff-list').innerHTML = ws.map(w => `<div class="card" style="display:flex; justify-content:space-between"><div><b>${w.name}</b><br>${w.rate}₽/час</div><button onclick="app.delS('${w.name}')" style="color:var(--red); background:none; border:none">УДАЛИТЬ</button></div>`).join('');
     },
 
+    async delS(n) { if(confirm("Удалить?")) { db.transaction("workers","readwrite").objectStore("workers").delete(n); this.renderS(); } },
+    changeMonth(dir) { viewDate.setMonth(viewDate.getMonth() + dir); this.renderB(); },
+    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); },
+    ui(id, el) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'scr-base') this.renderB();
+        if(id === 'scr-staff') this.renderS();
+    },
     async download() {
-        const ws = await this.get("workers");
-        const ls = await this.get("logs");
+        const ws = await this.get("workers"), ls = await this.get("logs");
         let t = `ОТЧЕТ ЗА ${viewDate.getMonth()+1}/${viewDate.getFullYear()}\n\n`;
         ws.forEach(w => {
             let h = 0;
@@ -332,16 +246,12 @@ dH += `<div class="day ${st}" onclick="app.openEdit('${w.name}','${ds}')">${i}</
                 const cin = dayL.find(l => l.type === 'IN'), cout = dayL.find(l => l.type === 'OUT');
                 if(cin && cout) h += (cout.ts - cin.ts) / 3600000;
             });
-            t += `${w.name}: ${h.toFixed(1)}ч | Итого: ${(h * w.rate).toFixed(0)}\n`;
+            t += `${w.name}: ${h.toFixed(1)}ч | Итого: ${(h * w.rate).toFixed(0)} ₽\n`;
         });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([t])); a.download = "report.txt"; a.click();
-    },
-
-    get(n) { return new Promise(r => db.transaction(n).objectStore(n).getAll().onsuccess = e => r(e.target.result)); }
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t])); a.download = "report.txt"; a.click();
+    }
 };
 window.onload = () => app.init();
 </script>
 </body>
 </html>
-
